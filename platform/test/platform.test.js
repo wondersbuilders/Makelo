@@ -41,9 +41,14 @@ function setup(dnsRecords = {}) {
     return ctx.app.request(`http://${host}${url}`, { method, headers: h, body: payload });
   };
 
-  async function signup(email = 'kmik@example.com', password = 'correct-horse-1') {
+  async function signup(email = 'kmik@example.com', password = 'correct-horse-1', { plan = 'pro' } = {}) {
     const res = await req('/account/signup', { method: 'POST', form: { email, password } });
     assert.equal(res.status, 303);
+    if (plan) {
+      const user = ctx.auth.userByEmail(email);
+      const p = ctx.billing.plans().find((x) => x.slug === plan);
+      ctx.billing.changePlan(user.id, p.id);
+    }
     return res.headers.get('set-cookie').split(';')[0];
   }
 

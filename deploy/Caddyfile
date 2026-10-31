@@ -52,7 +52,8 @@
 		redir https://{$APP_HOST}{uri}
 	}
 
-	# Everything else: published apps on free subdomains
+	# Everything else: the admin dashboard (ADMIN_HOST) and published apps on free subdomains.
+	# The platform tells them apart by host name.
 	handle {
 		import platform
 	}

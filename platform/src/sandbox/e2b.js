@@ -9,8 +9,8 @@ const ROOT = `${HOME}/project`;
  * Sandboxes auto-pause when idle and auto-resume on the next request, so files
  * (including node_modules) survive between visits without paying for idle time.
  */
-export function createE2bProvider(config) {
-  const base = { apiKey: config.e2bApiKey };
+export function createE2bProvider(config, getApiKey = () => config.e2bApiKey) {
+  const auth = () => ({ apiKey: getApiKey() });
   const idleMs = config.sandboxIdleMs;
 
   async function setup(sbx) {
@@ -118,10 +118,11 @@ export function createE2bProvider(config) {
 
   return {
     name: 'e2b',
+    configured: () => Boolean(getApiKey()),
 
     async create({ userId, projectKey }) {
       const opts = {
-        ...base,
+        ...auth(),
         timeoutMs: idleMs,
         metadata: { app: 'makelo', userId: String(userId), project: projectKey.slice(0, 64) },
         lifecycle: { onTimeout: 'pause', autoResume: true },
@@ -133,13 +134,13 @@ export function createE2bProvider(config) {
     },
 
     async connect(id) {
-      const sbx = await Sandbox.connect(id, { ...base, timeoutMs: idleMs });
+      const sbx = await Sandbox.connect(id, { ...auth(), timeoutMs: idleMs });
 
       return wrap(sbx);
     },
 
     async destroy(id) {
-      await Sandbox.kill(id, base).catch(() => {});
+      await Sandbox.kill(id, auth()).catch(() => {});
     },
   };
 }

@@ -9,7 +9,7 @@ const IGNORE = /(^|\/)(node_modules|\.git|\.cache|\.next\/cache)(\/|$)/;
 const MAX_INLINE_FILE = 1024 * 1024;
 const BACKLOG = 4000;
 
-export function createSandboxManager(db, config, provider) {
+export function createSandboxManager(db, config, provider, { onUsage } = {}) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS sandboxes (
       user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -198,6 +198,7 @@ export function createSandboxManager(db, config, provider) {
 
       if (secs > 0) {
         q.addUsage.run(session.userId, new Date(t).toISOString().slice(0, 10), secs);
+        onUsage?.(session.userId, secs);
       }
     }
 
@@ -237,9 +238,15 @@ export function createSandboxManager(db, config, provider) {
   // ---------- public API ----------
   return {
     providerName: provider.name,
+    configured: () => (provider.configured ? provider.configured() : true),
+    liveCount: () => sessions.size,
 
     /** Start or resume the sandbox for a project and return a session token. */
     async open(userId, projectKey) {
+      if (provider.configured && !provider.configured()) {
+        throw Object.assign(new Error('Cloud sandboxes are not set up yet — an admin needs to add the e2b API key.'), { status: 503 });
+      }
+
       const key = String(projectKey || '').slice(0, 120);
 
       if (!/^[\w.:-]{1,120}$/.test(key)) {

@@ -49,6 +49,47 @@ const MIGRATIONS = [
    -- Many people may *claim* a domain, but only one can prove ownership via DNS.
    CREATE UNIQUE INDEX domains_verified_host ON domains(hostname) WHERE verified_at IS NOT NULL;
    CREATE UNIQUE INDEX domains_site_host ON domains(site_id, hostname);`,
+
+  // 2: admin roles, plans, subscriptions and the credits ledger
+  `ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user';
+   ALTER TABLE users ADD COLUMN suspended_at INTEGER;
+   CREATE TABLE plans (
+     id              INTEGER PRIMARY KEY,
+     slug            TEXT NOT NULL UNIQUE,
+     name            TEXT NOT NULL,
+     description     TEXT NOT NULL DEFAULT '',
+     price_cents     INTEGER NOT NULL DEFAULT 0,
+     currency        TEXT NOT NULL DEFAULT 'GBP',
+     interval        TEXT NOT NULL DEFAULT 'month',
+     monthly_credits INTEGER NOT NULL DEFAULT 0,
+     max_apps        INTEGER NOT NULL DEFAULT 3,
+     custom_domains  INTEGER NOT NULL DEFAULT 0,
+     stripe_price_id TEXT,
+     visible         INTEGER NOT NULL DEFAULT 1,
+     archived        INTEGER NOT NULL DEFAULT 0,
+     sort            INTEGER NOT NULL DEFAULT 0,
+     created_at      INTEGER NOT NULL,
+     updated_at      INTEGER NOT NULL
+   );
+   CREATE TABLE subscriptions (
+     user_id      INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+     plan_id      INTEGER NOT NULL REFERENCES plans(id),
+     status       TEXT NOT NULL DEFAULT 'active',
+     period_start INTEGER NOT NULL,
+     period_end   INTEGER NOT NULL,
+     updated_at   INTEGER NOT NULL
+   );
+   CREATE TABLE credit_ledger (
+     id         INTEGER PRIMARY KEY,
+     user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     delta      INTEGER NOT NULL,
+     kind       TEXT NOT NULL,
+     note       TEXT NOT NULL DEFAULT '',
+     meta       TEXT,
+     created_at INTEGER NOT NULL
+   );
+   CREATE INDEX credit_ledger_user ON credit_ledger(user_id, created_at);
+   CREATE INDEX credit_ledger_time ON credit_ledger(created_at);`,
 ];
 
 export function openDb(dataDir) {

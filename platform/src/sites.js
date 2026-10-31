@@ -84,7 +84,7 @@ export function createSites(db, config) {
     deploys: (siteId) => q.deploysFor.all(siteId),
 
     /** Find the site attached to a builder chat, or create one with a free subdomain. */
-    ensureForChat(userId, { name, chatId }) {
+    ensureForChat(userId, { name, chatId, maxApps }) {
       const cleanName = String(name || 'My app').trim().slice(0, 80) || 'My app';
       const chat = chatId ? String(chatId).slice(0, 100) : null;
 
@@ -96,8 +96,10 @@ export function createSites(db, config) {
         }
       }
 
-      if (q.countForUser.get(userId).n >= config.maxSitesPerUser) {
-        return { error: `You can have up to ${config.maxSitesPerUser} apps on your plan.` };
+      const limit = Number.isFinite(maxApps) ? maxApps : config.maxSitesPerUser;
+
+      if (q.countForUser.get(userId).n >= limit) {
+        return { error: `Your plan allows ${limit} published app${limit === 1 ? '' : 's'}. Upgrade to publish more.` };
       }
 
       const t = now();

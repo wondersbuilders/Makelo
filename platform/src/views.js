@@ -1,9 +1,9 @@
-const esc = (v) =>
+export const esc = (v) =>
   String(v ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 
-const LOGO = `<svg viewBox="0 0 230 48" height="30" aria-label="Makelo"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7C3AED"/><stop offset="1" stop-color="#2563EB"/></linearGradient></defs><rect x="0" y="4" width="40" height="40" rx="9" fill="url(#g)"/><path d="M14 13 L14 32 L19 27.3 L22.5 34.5 L26 33 L22.6 25.9 L29 25.5 Z" fill="#fff" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/><text x="50" y="33" font-family="Inter,Segoe UI,Helvetica,Arial,sans-serif" font-size="25" font-weight="700" fill="currentColor">Make<tspan fill="#7C3AED">lo</tspan></text></svg>`;
+export const LOGO = `<svg viewBox="0 0 230 48" height="30" aria-label="Makelo"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7C3AED"/><stop offset="1" stop-color="#2563EB"/></linearGradient></defs><rect x="0" y="4" width="40" height="40" rx="9" fill="url(#g)"/><path d="M14 13 L14 32 L19 27.3 L22.5 34.5 L26 33 L22.6 25.9 L29 25.5 Z" fill="#fff" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/><text x="50" y="33" font-family="Inter,Segoe UI,Helvetica,Arial,sans-serif" font-size="25" font-weight="700" fill="currentColor">Make<tspan fill="#7C3AED">lo</tspan></text></svg>`;
 
-const CSS = `
+export const CSS = `
 :root{--bg:#f7f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--accent:#7c3aed;--accent2:#2563eb;--ok:#059669;--warn:#b45309;--bad:#dc2626;--code:#f3f4f6}
 @media (prefers-color-scheme:dark){:root{--bg:#0b0b12;--card:#15151f;--text:#f3f4f6;--muted:#9ca3af;--line:#272735;--code:#1f1f2b}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 Inter,Segoe UI,system-ui,sans-serif}
@@ -57,7 +57,30 @@ export function authPage({ mode, error, email = '', next = '' }) {
 
 const when = (ms) => (ms ? new Date(ms).toISOString().replace('T', ' ').slice(0, 16) + ' UTC' : '—');
 
-export function dashboardPage({ user, sites, siteUrl, tokens, newToken, flash }) {
+function planCard(billing) {
+  if (!billing) return '';
+  const plan = billing.plan;
+  const renew = billing.periodEnd ? new Date(billing.periodEnd).toISOString().slice(0, 10) : '';
+  const price = (p) => {
+    try {
+      return new Intl.NumberFormat('en-GB', { style: 'currency', currency: p.currency }).format(p.price_cents / 100);
+    } catch {
+      return `${p.currency} ${(p.price_cents / 100).toFixed(2)}`;
+    }
+  };
+  const others = billing.plans
+    .filter((p) => !plan || p.id !== plan.id)
+    .map((p) => `<div class="card" style="margin:0;background:var(--bg)"><b>${esc(p.name)}</b> · ${esc(price(p))}/month<div class="muted" style="font-size:13px">${Number(p.monthly_credits).toLocaleString('en-GB')} credits · ${p.max_apps} apps${p.custom_domains ? ' · custom domains' : ''}</div></div>`)
+    .join('');
+
+  return `<div class="card"><div class="app"><div><h2 style="margin:0">${esc(plan?.name || 'Free')} plan</h2>
+    <div class="muted">${Number(billing.balance).toLocaleString('en-GB')} credits left${renew ? ` · renews ${esc(renew)}` : ''}</div></div>
+    <span class="pill ${billing.balance > 0 ? 'ok' : 'wait'}">${billing.balance > 0 ? 'Active' : 'Out of credits'}</span></div>
+    ${others ? `<p class="muted" style="margin-top:14px">Other plans</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">${others}</div>` : ''}
+  </div>`;
+}
+
+export function dashboardPage({ user, sites, siteUrl, tokens, newToken, flash, billing }) {
   const apps = sites.length
     ? sites
         .map(
@@ -82,6 +105,7 @@ export function dashboardPage({ user, sites, siteUrl, tokens, newToken, flash })
     user,
     flash,
     body: `<div class="row" style="align-items:center;margin-bottom:12px"><h1>My apps</h1><div style="text-align:right"><a class="btn" href="/">+ Build a new app</a></div></div>
+      ${planCard(billing)}
       <div class="apps">${apps}</div>
       <div class="card"><h2>Desktop app access</h2>
         <p class="muted">The Makelo desktop app publishes to your account with an access token. Paste it into the desktop app when it asks.</p>

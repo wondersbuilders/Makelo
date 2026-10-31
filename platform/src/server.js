@@ -5,7 +5,10 @@ import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import { streamSSE } from 'hono/streaming';
 import { createAuth, createRateLimiter, SESSION_COOKIE } from './auth.js';
 import { openDb } from './db.js';
+import { createAdminApp } from './admin.js';
+import { createBilling } from './billing.js';
 import { createDomains, normalizeHostname } from './domains.js';
+import { createSettings, loadMasterKey } from './secrets.js';
 import { createE2bProvider } from './sandbox/e2b.js';
 import { createLocalProvider } from './sandbox/local.js';
 import { createSandboxManager } from './sandbox/manager.js';
@@ -15,18 +18,18 @@ import { appPage, authPage, dashboardPage, placeholderPage } from './views.js';
 const PH = (config) => `${config.scheme}://${config.appHost}/account/signup`;
 const safeNext = (n) => (typeof n === 'string' && n.startsWith('/') && !n.startsWith('//') && !n.startsWith('/\\') ? n : '/');
 
-function pickProvider(config) {
-  if (config.sandboxProvider === 'e2b') {
-    if (!config.e2bApiKey) throw new Error('SANDBOX_PROVIDER=e2b needs E2B_API_KEY');
-    return createE2bProvider(config);
-  }
-
+function pickProvider(config, settings) {
   if (config.sandboxProvider === 'local') {
     console.warn('[makelo] SANDBOX_PROVIDER=local runs user code on this machine without isolation. Development only!');
     return createLocalProvider(config);
   }
 
-  return null;
+  if (config.sandboxProvider === 'off') {
+    return null;
+  }
+
+  // e2b: the key can be added later in Admin → API keys; it is read on every sandbox start.
+  return createE2bProvider(config, () => settings.secret('E2B_API_KEY') || config.e2bApiKey);
 }
 
 export function createApp(config, { resolver, db: givenDb, sandboxProvider } = {}) {
@@ -34,8 +37,18 @@ export function createApp(config, { resolver, db: givenDb, sandboxProvider } = {
   const auth = createAuth(db, config);
   const sites = createSites(db, config);
   const domains = createDomains(db, config, resolver);
-  const provider = sandboxProvider ?? pickProvider(config);
-  const sandboxes = provider ? createSandboxManager(db, config, provider) : null;
+  const settings = createSettings(db, loadMasterKey(config));
+  const billing = createBilling(db, settings);
+  const provider = sandboxProvider ?? pickProvider(config, settings);
+  const sandboxes = provider
+    ? createSandboxManager(db, config, provider, { onUsage: (userId, seconds) => billing.chargeSandbox(userId, seconds) })
+    : null;
+  const adminEmails = new Set(
+    String(config.adminEmails || '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
+  );
   const limitAuth = createRateLimiter({ max: 10, windowMs: 10 * 60_000 });
   const cookieName = config.secureCookies ? `__Host-${SESSION_COOKIE}` : SESSION_COOKIE;
 
@@ -88,6 +101,11 @@ export function createApp(config, { resolver, db: givenDb, sandboxProvider } = {
     }
   }
 
+  const billingSummary = (userId) => {
+    const sub = billing.subscription(userId);
+    return { plan: sub?.plan, periodEnd: sub?.period_end, balance: billing.balance(userId), plans: billing.plans().filter((p) => p.visible && !p.archived) };
+  };
+
   const flashFrom = (c) => {
     const ok = c.req.query('ok');
     const err = c.req.query('error');
@@ -106,9 +124,45 @@ export function createApp(config, { resolver, db: givenDb, sandboxProvider } = {
 
   app.get('/healthz', (c) => c.json({ ok: true }));
 
-  // Everything below on non-app hosts is a published user site.
+  // ---------- internal API for the builder (Docker network only; blocked at the proxy) ----------
+  const internalOk = (c) => !config.internalSecret || c.req.header('x-internal-secret') === config.internalSecret;
+
+  app.get('/internal/provider-keys', (c) => (internalOk(c) ? c.json({ keys: settings.builderKeys() }) : c.json({ error: 'forbidden' }, 403)));
+
+  app.post('/internal/usage', async (c) => {
+    if (!internalOk(c)) return c.json({ error: 'forbidden' }, 403);
+
+    const body = await c.req.json().catch(() => ({}));
+    const userId = Number(body.userId);
+
+    if (!userId || !auth.userById(userId)) {
+      return c.json({ error: 'unknown user' }, 400);
+    }
+
+    const credits = billing.chargeAi(userId, {
+      provider: String(body.provider || '').slice(0, 40),
+      model: String(body.model || '').slice(0, 80),
+      inputTokens: Math.max(0, Number(body.inputTokens) || 0),
+      outputTokens: Math.max(0, Number(body.outputTokens) || 0),
+    });
+
+    return c.json({ charged: credits, balance: billing.balance(userId) });
+  });
+
+  // ---------- admin dashboard on its own host ----------
+  const adminApp = createAdminApp({ db, config, auth, sites, billing, settings, sandboxes, limitAuth });
+
+  // Admin host → admin app; app host → builder API + accounts; anything else → published user sites.
   app.use('*', async (c, next) => {
-    if (isAppHost(c) || c.req.path.startsWith('/internal/')) {
+    if (c.req.path.startsWith('/internal/')) {
+      return next();
+    }
+
+    if (hostOf(c) === config.adminHost) {
+      return adminApp.fetch(c.req.raw);
+    }
+
+    if (isAppHost(c)) {
       return next();
     }
 
@@ -165,6 +219,14 @@ export function createApp(config, { resolver, db: givenDb, sandboxProvider } = {
         return c.html(authPage({ mode, error: result.error, email: form.email, next: form.next }), 400);
       }
 
+      if (mode === 'signup') {
+        billing.enroll(result.user.id);
+
+        if (adminEmails.has(result.user.email)) {
+          auth.setRole(result.user.id, 'admin');
+        }
+      }
+
       setSession(c, result.user.id);
 
       return c.redirect(mode === 'signup' && !form.next ? '/' : safeNext(form.next), 303);
@@ -206,7 +268,7 @@ export function createApp(config, { resolver, db: givenDb, sandboxProvider } = {
     }
 
     return c.html(
-      dashboardPage({ user, sites: sites.list(user.id), siteUrl: sites.siteUrl, tokens: auth.listApiTokens(user.id), flash: flashFrom(c) }),
+      dashboardPage({ user, sites: sites.list(user.id), siteUrl: sites.siteUrl, tokens: auth.listApiTokens(user.id), flash: flashFrom(c), billing: billingSummary(user.id) }),
     );
   });
 
@@ -216,7 +278,7 @@ export function createApp(config, { resolver, db: givenDb, sandboxProvider } = {
     const token = auth.createApiToken(user.id, form.name);
 
     return c.html(
-      dashboardPage({ user, sites: sites.list(user.id), siteUrl: sites.siteUrl, tokens: auth.listApiTokens(user.id), newToken: token }),
+      dashboardPage({ user, sites: sites.list(user.id), siteUrl: sites.siteUrl, tokens: auth.listApiTokens(user.id), newToken: token, billing: billingSummary(user.id) }),
     );
   });
 
@@ -271,6 +333,10 @@ export function createApp(config, { resolver, db: givenDb, sandboxProvider } = {
   app.post('/account/apps/:id/domains', async (c) => {
     const site = ownedSite(c);
     if (!site) return c.redirect('/account');
+    if (!billing.limits(c.get('user').id).customDomains) {
+      return back(c, `/account/apps/${site.id}`, 'error', 'Your plan does not include custom domains. Upgrade to connect your own domain.');
+    }
+
     const r = domains.add(site, (await c.req.parseBody()).hostname);
     return back(c, `/account/apps/${site.id}`, r.error ? 'error' : 'ok', r.error || 'Domain added. Now add the DNS records below.');
   });
@@ -295,6 +361,13 @@ export function createApp(config, { resolver, db: givenDb, sandboxProvider } = {
     const user = currentUser(c);
 
     if (user) {
+      const uri = c.req.header('x-forwarded-uri') || '';
+
+      // AI requests need credits.
+      if (/^\/api\/(chat|llmcall|enhancer)\b/.test(uri) && !billing.hasCredits(user.id)) {
+        return c.json({ error: "You've used all your Makelo credits. Upgrade your plan or wait for your monthly credits to renew." }, 402);
+      }
+
       c.header('X-Makelo-User', String(user.id));
       return c.text('ok');
     }
@@ -325,7 +398,11 @@ export function createApp(config, { resolver, db: givenDb, sandboxProvider } = {
     settingsUrl: `${config.scheme}://${config.appHost}/account/apps/${s.id}`,
   });
 
-  app.get('/api/platform/me', (c) => c.json({ user: { id: c.get('user').id, email: c.get('user').email } }));
+  app.get('/api/platform/me', (c) => {
+    const u = c.get('user');
+    const sub = billing.subscription(u.id);
+    return c.json({ user: { id: u.id, email: u.email, plan: sub?.plan?.name || null, credits: billing.balance(u.id) } });
+  });
   app.get('/api/platform/sites', (c) => c.json({ sites: sites.list(c.get('user').id).map(siteJson) }));
 
   app.post(
@@ -340,7 +417,11 @@ export function createApp(config, { resolver, db: givenDb, sandboxProvider } = {
         return c.json({ error: 'Invalid request body.' }, 400);
       }
 
-      const ensured = sites.ensureForChat(c.get('user').id, { name: body.name, chatId: body.chatId });
+      const ensured = sites.ensureForChat(c.get('user').id, {
+        name: body.name,
+        chatId: body.chatId,
+        maxApps: billing.limits(c.get('user').id).maxApps,
+      });
 
       if (ensured.error) {
         return c.json({ error: ensured.error }, 400);
@@ -363,7 +444,7 @@ export function createApp(config, { resolver, db: givenDb, sandboxProvider } = {
   };
 
   app.get('/api/platform/sandbox/config', (c) =>
-    c.json({ enabled: Boolean(sandboxes), provider: sandboxes?.providerName || null, usedSecondsThisMonth: sandboxes ? sandboxes.usageThisMonth(c.get('user').id) : 0, monthlyLimitSeconds: config.sandboxMonthlySeconds }),
+    c.json({ enabled: Boolean(sandboxes?.configured()), provider: sandboxes?.providerName || null, usedSecondsThisMonth: sandboxes ? sandboxes.usageThisMonth(c.get('user').id) : 0, monthlyLimitSeconds: config.sandboxMonthlySeconds }),
   );
 
   app.post('/api/platform/sandbox', async (c) => {
@@ -371,6 +452,10 @@ export function createApp(config, { resolver, db: givenDb, sandboxProvider } = {
 
     try {
       const { project } = await c.req.json();
+      if (!billing.hasCredits(c.get('user').id)) {
+        return c.json({ error: "You've used all your Makelo credits. Upgrade your plan to keep building." }, 402);
+      }
+
       return c.json(await sandboxes.open(c.get('user').id, project));
     } catch (err) {
       return sbxError(c, err);
@@ -506,5 +591,5 @@ export function createApp(config, { resolver, db: givenDb, sandboxProvider } = {
     });
   }
 
-  return { app, db, auth, sites, domains, sandboxes };
+  return { app, db, auth, sites, domains, sandboxes, settings, billing };
 }

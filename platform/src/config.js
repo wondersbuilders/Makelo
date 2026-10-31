@@ -36,11 +36,18 @@ export function loadConfig(env = process.env) {
     maxSitesPerUser: Number(env.MAX_SITES_PER_USER || 20),
     keepDeploys: Number(env.KEEP_DEPLOYS || 5),
 
+    // Admin dashboard on its own host. ADMIN_EMAILS become admins when they sign up or sign in there.
+    adminHost: (env.ADMIN_HOST || `admin.${sitesDomain}`).toLowerCase(),
+    adminEmails: env.ADMIN_EMAILS || '',
+    // Shared secret between the builder and the platform's internal API (optional inside Docker).
+    internalSecret: env.INTERNAL_SECRET || '',
+
     // Cloud sandboxes (where users' apps run while they build)
     //   SANDBOX_PROVIDER = e2b   -> e2b.dev microVMs (production)
     //                      local -> folders on this machine, NO isolation (dev/tests only)
     //                      ''    -> off (builder keeps using in-browser WebContainers)
-    sandboxProvider: env.SANDBOX_PROVIDER || (env.E2B_API_KEY ? 'e2b' : ''),
+    // e2b by default; the key can come from E2B_API_KEY or Admin → API keys.
+    sandboxProvider: env.SANDBOX_PROVIDER || 'e2b',
     e2bApiKey: env.E2B_API_KEY || '',
     e2bTemplate: env.E2B_TEMPLATE || '',
     sandboxIdleMs: Number(env.SANDBOX_IDLE_MINUTES || 10) * 60_000,

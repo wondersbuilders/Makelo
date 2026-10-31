@@ -1,4 +1,5 @@
 import { createRequestHandler, RouterContextProvider, type ServerBuild } from 'react-router';
+import { adminProviderKeys } from '~/lib/.server/makelo-platform';
 
 declare global {
   interface CloudflareEnvironment extends Env {}
@@ -17,7 +18,9 @@ export default {
       cloudflare: { env: Env; ctx: ExecutionContext };
     };
 
-    context.cloudflare = { env, ctx };
+    // Makelo: provider keys entered in the admin dashboard override the server environment.
+    const adminKeys = await adminProviderKeys();
+    context.cloudflare = { env: Object.keys(adminKeys).length ? ({ ...env, ...adminKeys } as Env) : env, ctx };
 
     return requestHandler(request, context);
   },

@@ -28,6 +28,7 @@ import { getWebResearchInstructions } from '~/lib/.server/llm/prompt-web-tools';
 import { getFilePaths, selectContext } from '~/lib/.server/llm/select-context';
 import { streamText, type StreamingOptions } from '~/lib/.server/llm/stream-text';
 import { extractPropertiesFromMessage } from '~/lib/.server/llm/utils';
+import { reportAiUsage } from '~/lib/.server/makelo-platform';
 import { getApiKeysFromCookie, getProviderSettingsFromCookie } from '~/lib/api/cookies';
 import { getAgentLoopInstructions, getAgentLoopProgress } from '~/lib/common/agentLoop';
 import { CONTINUE_PROMPT } from '~/lib/common/prompts/prompts';
@@ -453,6 +454,16 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
             }
 
             if (finishReason !== 'length') {
+              // Makelo: charge the user's credits for this reply.
+              const lastUser = processedMessages.filter((x) => x.role == 'user').slice(-1)[0];
+              const used = lastUser ? extractPropertiesFromMessage(lastUser) : { provider: '', model: '' };
+              await reportAiUsage(request, {
+                provider: used.provider,
+                model: used.model,
+                inputTokens: cumulativeUsage.promptTokens,
+                outputTokens: cumulativeUsage.completionTokens,
+              });
+
               writer.write({
                 type: 'data-usage',
                 data: {

@@ -197,8 +197,13 @@ test("sandbox sessions are private to their owner", async () => {
   assert.equal(bad.status, 400);
 });
 
-test('sandbox disabled by default', async () => {
+test('cloud sandboxes report not configured until an e2b key is added', async () => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cma-off-'));
-  const ctx = createApp(loadConfig({ APP_HOST: APP, DATA_DIR: dataDir, SECURE_COOKIES: 'false' }));
-  assert.equal(ctx.sandboxes, null);
+  const ctx = createApp(loadConfig({ APP_HOST: APP, DATA_DIR: dataDir, SECURE_COOKIES: 'false' }), {});
+  apps.push(ctx);
+  assert.equal(ctx.sandboxes.configured(), false);
+  ctx.settings.set('key:E2B_API_KEY', 'e2b_test_123', { secret: true });
+  assert.equal(ctx.sandboxes.configured(), true);
+  const off = createApp(loadConfig({ APP_HOST: APP, DATA_DIR: fs.mkdtempSync(path.join(os.tmpdir(), 'cma-x-')), SECURE_COOKIES: 'false', SANDBOX_PROVIDER: 'off' }));
+  assert.equal(off.sandboxes, null);
 });
