@@ -8,6 +8,7 @@ export default class TogetherProvider extends BaseProvider {
   getApiKeyLink = 'https://api.together.xyz/settings/api-keys';
 
   config = {
+    baseUrl: 'https://api.together.xyz/v1',
     baseUrlKey: 'TOGETHER_API_BASE_URL',
     apiTokenKey: 'TOGETHER_API_KEY',
   };

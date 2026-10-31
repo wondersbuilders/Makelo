@@ -56,33 +56,96 @@ export const mask = (value) => {
  * Values entered in the admin dashboard override the server's environment variables.
  */
 export const KEY_CATALOG = [
-  { group: 'AI models', env: 'OPENAI_API_KEY', label: 'OpenAI', help: 'platform.openai.com → API keys' },
   { group: 'AI models', env: 'ANTHROPIC_API_KEY', label: 'Anthropic (Claude)', help: 'console.anthropic.com → API keys' },
+  { group: 'AI models', env: 'OPENAI_API_KEY', label: 'OpenAI', help: 'platform.openai.com → API keys' },
   { group: 'AI models', env: 'GOOGLE_GENERATIVE_AI_API_KEY', label: 'Google Gemini', help: 'aistudio.google.com → API key' },
-  { group: 'AI models', env: 'OPEN_ROUTER_API_KEY', label: 'OpenRouter', help: 'openrouter.ai → Keys' },
-  { group: 'AI models', env: 'DEEPSEEK_API_KEY', label: 'DeepSeek' },
-  { group: 'AI models', env: 'XAI_API_KEY', label: 'xAI (Grok)' },
-  { group: 'AI models', env: 'MISTRAL_API_KEY', label: 'Mistral' },
-  { group: 'AI models', env: 'GROQ_API_KEY', label: 'Groq' },
-  { group: 'AI models', env: 'TOGETHER_API_KEY', label: 'Together AI' },
-  { group: 'AI models', env: 'PERPLEXITY_API_KEY', label: 'Perplexity' },
-  { group: 'AI models', env: 'COHERE_API_KEY', label: 'Cohere' },
-  { group: 'AI models', env: 'FIREWORKS_API_KEY', label: 'Fireworks' },
-  { group: 'AI models', env: 'CEREBRAS_API_KEY', label: 'Cerebras' },
-  { group: 'AI models', env: 'MOONSHOT_API_KEY', label: 'Moonshot (Kimi)' },
-  { group: 'AI models', env: 'HuggingFace_API_KEY', label: 'Hugging Face' },
+  { group: 'AI models', env: 'OPEN_ROUTER_API_KEY', label: 'OpenRouter', help: 'openrouter.ai → Keys (one key, hundreds of models)' },
+  { group: 'AI models', env: 'DEEPSEEK_API_KEY', label: 'DeepSeek', help: 'platform.deepseek.com → API keys' },
+  { group: 'AI models', env: 'XAI_API_KEY', label: 'xAI (Grok)', help: 'console.x.ai' },
+  { group: 'AI models', env: 'MISTRAL_API_KEY', label: 'Mistral', help: 'console.mistral.ai' },
+  { group: 'AI models', env: 'GROQ_API_KEY', label: 'Groq', help: 'console.groq.com' },
+  { group: 'AI models', env: 'TOGETHER_API_KEY', label: 'Together AI', help: 'api.together.ai' },
+  { group: 'AI models', env: 'PERPLEXITY_API_KEY', label: 'Perplexity', help: 'perplexity.ai → API' },
+  { group: 'AI models', env: 'COHERE_API_KEY', label: 'Cohere', help: 'dashboard.cohere.com' },
+  { group: 'AI models', env: 'FIREWORKS_API_KEY', label: 'Fireworks', help: 'fireworks.ai → API keys' },
+  { group: 'AI models', env: 'CEREBRAS_API_KEY', label: 'Cerebras', help: 'cloud.cerebras.ai' },
+  { group: 'AI models', env: 'MOONSHOT_API_KEY', label: 'Moonshot (Kimi)', help: 'platform.moonshot.ai' },
+  { group: 'AI models', env: 'HYPERBOLIC_API_KEY', label: 'Hyperbolic', help: 'app.hyperbolic.xyz' },
+  { group: 'AI models', env: 'ZAI_API_KEY', label: 'Z.ai (GLM)', help: 'z.ai → API keys' },
+  { group: 'AI models', env: 'HuggingFace_API_KEY', label: 'Hugging Face', help: 'huggingface.co → Settings → Tokens' },
+  { group: 'AI models', env: 'GITHUB_API_KEY', label: 'GitHub Models', help: 'GitHub token with models:read' },
+  {
+    group: 'AI models',
+    env: 'AWS_BEDROCK_CONFIG',
+    label: 'Amazon Bedrock',
+    help: 'JSON: {"region":"us-east-1","accessKeyId":"…","secretAccessKey":"…"}',
+    format: 'json',
+  },
+  {
+    group: 'Custom & self-hosted AI',
+    env: 'OPENAI_LIKE_API_BASE_URL',
+    label: 'OpenAI-compatible URL',
+    help: 'Any OpenAI-compatible API, e.g. https://api.example.com/v1',
+    format: 'url',
+  },
+  { group: 'Custom & self-hosted AI', env: 'OPENAI_LIKE_API_KEY', label: 'OpenAI-compatible key', help: 'Key for the URL above' },
+  {
+    group: 'Custom & self-hosted AI',
+    env: 'OLLAMA_API_BASE_URL',
+    label: 'Ollama server URL',
+    help: 'Your own Ollama server, e.g. http://10.0.0.5:11434',
+    format: 'url',
+  },
+  {
+    group: 'Custom & self-hosted AI',
+    env: 'LMSTUDIO_API_BASE_URL',
+    label: 'LM Studio server URL',
+    help: 'e.g. http://10.0.0.5:1234',
+    format: 'url',
+  },
   { group: 'Sandboxes', env: 'E2B_API_KEY', label: 'e2b.dev', help: 'e2b.dev/dashboard → API key' },
   { group: 'Payments (Whop)', env: 'WHOP_API_KEY', label: 'Whop API key', help: 'Whop dashboard → Developer → Company API key' },
   { group: 'Payments (Whop)', env: 'WHOP_COMPANY_ID', label: 'Whop company ID', help: 'biz_… (Dashboard → Settings)' },
   { group: 'Payments (Whop)', env: 'WHOP_WEBHOOK_SECRET', label: 'Whop webhook secret', help: 'ws_… — from the webhook you create for /webhooks/whop' },
   { group: 'Domains', env: 'NAMECOM_USERNAME', label: 'Name.com username' },
-  { group: 'Domains', env: 'NAMECOM_API_TOKEN', label: 'Name.com API token' },
+  { group: 'Domains', env: 'NAMECOM_API_TOKEN', label: 'Name.com API token', help: 'name.com → Account → API settings' },
   { group: 'Code hosting', env: 'GITHUB_TOKEN', label: 'GitHub token', help: 'Used for template downloads (higher rate limits)' },
   { group: 'Email', env: 'SMTP_URL', label: 'SMTP URL', help: 'smtp://user:pass@host:587 — for system emails' },
 ];
 
-/** AI provider keys handed to the builder. */
-export const BUILDER_KEYS = new Set(KEY_CATALOG.filter((k) => k.group === 'AI models' || k.env === 'GITHUB_TOKEN').map((k) => k.env));
+/** Keys handed to the builder: every AI provider key/URL plus the GitHub token for templates. */
+export const BUILDER_KEYS = new Set(
+  KEY_CATALOG.filter((k) => k.group === 'AI models' || k.group === 'Custom & self-hosted AI' || k.env === 'GITHUB_TOKEN').map(
+    (k) => k.env,
+  ),
+);
+
+/** Validate a value the admin pasted; returns an error message or null. */
+export function validateKeyValue(entry, value) {
+  if (value.length > 8000) {
+    return 'That value is too long.';
+  }
+
+  if (entry.format === 'json') {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' ? null : 'Paste a JSON object.';
+    } catch {
+      return 'That is not valid JSON.';
+    }
+  }
+
+  if (entry.format === 'url') {
+    try {
+      const u = new URL(value);
+      return u.protocol === 'http:' || u.protocol === 'https:' ? null : 'Use an http:// or https:// URL.';
+    } catch {
+      return 'That is not a valid URL.';
+    }
+  }
+
+  return /\s/.test(value) ? 'That does not look like a valid key (no spaces allowed).' : null;
+}
 
 export function createSettings(db, masterKey) {
   db.exec(`CREATE TABLE IF NOT EXISTS settings (
@@ -132,8 +195,15 @@ export function createSettings(db, masterKey) {
         return {
           ...k,
           source: stored ? 'dashboard' : env[k.env] ? 'environment' : 'missing',
-          masked: stored ? mask(stored) : env[k.env] ? mask(env[k.env]) : '',
+          masked: k.format === 'url' ? stored || env[k.env] || '' : stored ? mask(stored) : env[k.env] ? mask(env[k.env]) : '',
           updatedAt: row?.updated_at,
+          test: (() => {
+            try {
+              return JSON.parse(read(q.get.get(`keytest:${k.env}`)) || 'null');
+            } catch {
+              return null;
+            }
+          })(),
         };
       });
     },

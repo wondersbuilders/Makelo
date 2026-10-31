@@ -16,7 +16,8 @@ import {
 import { RATE_DEFAULTS } from './billing.js';
 import { money } from './admin-views.js';
 import { normalizeHostname } from './domains.js';
-import { KEY_CATALOG } from './secrets.js';
+import { TESTABLE, testKey } from './key-tests.js';
+import { KEY_CATALOG, validateKeyValue } from './secrets.js';
 
 const DAY = 86400_000;
 
@@ -25,7 +26,7 @@ const DAY = 86400_000;
  * session cookie. Only users with role "admin" can sign in. People listed in ADMIN_EMAILS are
  * promoted to admin the first time they sign in here.
  */
-export function createAdminApp({ db, config, auth, sites, billing, settings, sandboxes, payments, limitAuth }) {
+export function createAdminApp({ db, config, auth, sites, billing, settings, sandboxes, payments, limitAuth, fetchImpl }) {
   const app = new Hono();
   const cookieName = config.secureCookies ? '__Host-mk_admin' : 'mk_admin';
   const bootstrapAdmins = new Set(
@@ -353,7 +354,46 @@ export function createAdminApp({ db, config, auth, sites, billing, settings, san
   });
 
   // ---------- API keys ----------
-  app.get('/keys', (c) => page(c, 'API keys', keysPage({ keys: settings.keyStatus() })));
+  app.get('/keys', (c) => page(c, 'API keys', keysPage({ keys: settings.keyStatus(), testable: TESTABLE })));
+
+  const runKeyTest = async (env) => {
+    const get = (name) =>
+      name === '__WHOP_BASE'
+        ? settings.get('whop_sandbox') === '1'
+          ? 'https://sandbox-api.whop.com/api/v1'
+          : 'https://api.whop.com/api/v1'
+        : settings.secret(name);
+    const result = await testKey(env, get, { fetchImpl });
+    settings.set(`keytest:${env}`, JSON.stringify(result));
+
+    return result;
+  };
+
+  app.post('/keys/test', async (c) => {
+    const form = await c.req.parseBody();
+    const entry = KEY_CATALOG.find((k) => k.env === form.env);
+
+    if (!entry || !TESTABLE.has(entry.env)) {
+      return back(c, '/keys', 'error', 'That key has no connection test.');
+    }
+
+    const result = await runKeyTest(entry.env);
+
+    return back(c, '/keys', result.ok ? 'ok' : 'error', `${entry.label}: ${result.message}`);
+  });
+
+  app.post('/keys/test-all', async (c) => {
+    const status = settings.keyStatus().filter((k) => k.source !== 'missing' && TESTABLE.has(k.env));
+    const results = await Promise.all(status.map((k) => runKeyTest(k.env)));
+    const failed = results.filter((r) => !r.ok).length;
+
+    return back(
+      c,
+      '/keys',
+      failed ? 'error' : 'ok',
+      status.length ? `${status.length - failed} of ${status.length} connected.` : 'No keys to test yet.',
+    );
+  });
 
   app.post('/keys', async (c) => {
     const form = await c.req.parseBody();
@@ -365,6 +405,8 @@ export function createAdminApp({ db, config, auth, sites, billing, settings, san
 
     if (form.clear === '1') {
       settings.remove(`key:${entry.env}`);
+      settings.remove(`keytest:${entry.env}`);
+
       return back(c, '/keys', 'ok', `${entry.label} key removed.`);
     }
 
@@ -374,13 +416,28 @@ export function createAdminApp({ db, config, auth, sites, billing, settings, san
       return back(c, '/keys', 'error', `Paste a value for ${entry.label} first.`);
     }
 
-    if (value.length > 4000 || /\s/.test(value.replace(/^smtp/, ''))) {
-      return back(c, '/keys', 'error', 'That does not look like a valid key (no spaces allowed).');
+    const invalid = validateKeyValue(entry, value);
+
+    if (invalid) {
+      return back(c, '/keys', 'error', invalid);
     }
 
     settings.set(`key:${entry.env}`, value, { secret: true });
+    settings.remove(`keytest:${entry.env}`);
 
-    return back(c, '/keys', 'ok', `${entry.label} key saved.`);
+    // Check the new key straight away so the admin sees whether it works.
+    if (TESTABLE.has(entry.env)) {
+      const result = await runKeyTest(entry.env);
+
+      return back(
+        c,
+        '/keys',
+        result.ok ? 'ok' : 'error',
+        result.ok ? `${entry.label} saved and connected.` : `${entry.label} saved, but the test failed: ${result.message}`,
+      );
+    }
+
+    return back(c, '/keys', 'ok', `${entry.label} saved.`);
   });
 
   // ---------- settings ----------

@@ -17,7 +17,7 @@ button.secondary,.btn.secondary{background:var(--code);color:var(--text);border:
 .row{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.row>*{flex:1}.row>button{flex:0 0 auto}
 .flash{padding:12px 14px;border-radius:10px;margin-bottom:16px}.flash.error{background:#fee2e2;color:#991b1b}.flash.ok{background:#d1fae5;color:#065f46}.flash.warn{background:#fef3c7;color:#92400e}
 table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}code{background:var(--code);padding:2px 6px;border-radius:6px;word-break:break-all}
-.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:99px}.pill.ok{background:#d1fae5;color:#065f46}.pill.wait{background:#fef3c7;color:#92400e}.pill.off{background:var(--code);color:var(--muted)}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:99px}.pill.ok{background:#d1fae5;color:#065f46}.pill.wait{background:#fef3c7;color:#92400e}.pill.off{background:var(--code);color:var(--muted)}.pill:not(.ok):not(.wait):not(.off):not(.bad){background:var(--code);color:var(--fg,inherit)}.pill.bad{background:#fee2e2;color:#991b1b}
 .apps{display:grid;gap:12px}.app{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
 form.inline{display:inline}
 .num{text-align:right;font-variant-numeric:tabular-nums}

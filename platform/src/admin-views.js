@@ -19,7 +19,7 @@ const ADMIN_CSS = `
 .num{text-align:right;font-variant-numeric:tabular-nums} .neg{color:var(--bad)} .pos{color:var(--ok)}
 select{padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--text);font:inherit}
 .keyrow{display:grid;grid-template-columns:220px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
-.keyrow:last-child{border-bottom:0} .keyrow form{display:flex;gap:8px} .keyrow input{min-width:0}
+.keyrow:last-child{border-bottom:0} .keyrow form{display:flex;gap:8px} .keyrow input{min-width:0} .keyactions{display:flex;gap:8px;align-items:center}
 .check{display:flex;gap:8px;align-items:center;font-weight:500;margin:12px 0 0} .check input{width:auto}
 `;
 
@@ -260,11 +260,39 @@ export function usagePage({ totals, daily, entries, kind }) {
   </table></div>`;
 }
 
-export function keysPage({ keys }) {
-  const groups = [...new Set(keys.map((k) => k.group))];
+const timeAgoShort = (ms) => {
+  const m = Math.round((Date.now() - ms) / 60000);
+  return m < 1 ? 'just now' : m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`;
+};
 
-  return `<h1>API keys</h1>
-  <p class="muted">Keys are encrypted before they are stored. Keys saved here override the server's environment variables and take effect within a minute — no restart needed.</p>
+function keyState(k) {
+  if (k.source === 'missing') {
+    return '<span class="pill wait">Not connected</span>';
+  }
+
+  const where = k.source === 'dashboard' ? '' : ' <span class="muted" style="font-size:12px">(server env)</span>';
+  const value = `<code>${esc(k.masked)}</code>`;
+
+  if (!k.test) {
+    return `<span class="pill">Saved</span> ${value}${where}`;
+  }
+
+  return k.test.ok
+    ? `<span class="pill ok">Connected</span> ${value}${where} <span class="muted" style="font-size:12px">checked ${timeAgoShort(k.test.at)}</span>`
+    : `<span class="pill bad" title="${esc(k.test.message)}">Failed</span> ${value}${where}<div class="muted" style="font-size:12px;margin-top:4px">${esc(k.test.message)}</div>`;
+}
+
+export function keysPage({ keys, testable = new Set() }) {
+  const groups = [...new Set(keys.map((k) => k.group))];
+  const set = keys.filter((k) => k.source !== 'missing');
+  const connected = set.filter((k) => k.test?.ok).length;
+
+  return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+    <h1 style="margin:0">API keys &amp; providers</h1>
+    <form method="post" action="/keys/test-all"><button class="secondary">Test all connections</button></form></div>
+  <p class="muted">Connect every third-party service Makelo uses. Keys are encrypted, override the server's environment
+  variables and take effect within a minute — no restart. Users never see or enter keys: every AI request runs on the keys
+  connected here. ${set.length} of ${keys.length} set${set.length ? `, ${connected} verified` : ''}.</p>
   ${groups
     .map(
       (g) => `<div class="card"><h2>${esc(g)}</h2>
@@ -272,13 +300,10 @@ export function keysPage({ keys }) {
         .filter((k) => k.group === g)
         .map(
           (k) => `<div class="keyrow"><div><b>${esc(k.label)}</b><div class="muted" style="font-size:12px"><code>${esc(k.env)}</code>${k.help ? ` · ${esc(k.help)}` : ''}</div></div>
-          <div>${
-            k.source === 'missing'
-              ? '<span class="pill wait">Not set</span>'
-              : `<span class="pill ok">${k.source === 'dashboard' ? 'Set here' : 'From server env'}</span> <code>${esc(k.masked)}</code>`
-          }</div>
-          <form method="post" action="/keys"><input type="hidden" name="env" value="${esc(k.env)}"><input name="value" type="password" placeholder="Paste new value" autocomplete="off"><button>Save</button>
-            ${k.source === 'dashboard' ? `<button class="secondary" name="clear" value="1" formnovalidate>Remove</button>` : ''}</form></div>`,
+          <div>${keyState(k)}</div>
+          <div class="keyactions"><form method="post" action="/keys"><input type="hidden" name="env" value="${esc(k.env)}"><input name="value" type="${k.format === 'url' ? 'url' : 'password'}" placeholder="${k.format === 'url' ? 'https://…' : k.format === 'json' ? 'Paste JSON' : 'Paste key'}" autocomplete="off"><button>Save</button>
+            ${k.source === 'dashboard' ? `<button class="secondary" name="clear" value="1" formnovalidate>Remove</button>` : ''}</form>
+            ${k.source !== 'missing' && testable.has(k.env) ? `<form method="post" action="/keys/test"><input type="hidden" name="env" value="${esc(k.env)}"><button class="secondary">Test</button></form>` : ''}</div></div>`,
         )
         .join('')}</div>`,
     )

@@ -10,6 +10,14 @@ import { createApp } from '../src/server.js';
 const APP = 'app.makelo.test';
 const ADMIN = 'admin.makelo.test';
 
+// Fake provider APIs for "Test connection": keys containing "good" are accepted.
+const calls = [];
+const fakeFetch = async (url, init = {}) => {
+  calls.push({ url: String(url), headers: init.headers || {} });
+  const h = JSON.stringify(init.headers || {}) + String(url);
+  return new Response('{}', { status: h.includes('good') ? 200 : 401 });
+};
+
 function setup(extra = {}) {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mk-admin-'));
   const config = loadConfig({
@@ -23,7 +31,7 @@ function setup(extra = {}) {
     SANDBOX_PROVIDER: 'off',
     ...extra,
   });
-  const ctx = createApp(config);
+  const ctx = createApp(config, { fetchImpl: fakeFetch });
   const req = (host, url, { method = 'GET', cookie, form, body, headers = {} } = {}) => {
     const h = { host, ...headers };
     if (cookie) h.cookie = cookie;
@@ -86,7 +94,7 @@ test('admin saves API keys encrypted; builder fetches them internally', async ()
   const { cookie } = await adminLogin('boss@example.com');
 
   const save = await req(ADMIN, '/keys', { method: 'POST', cookie, form: { env: 'OPENAI_API_KEY', value: 'sk-live-abcdef123456' } });
-  assert.match(decodeURIComponent(save.headers.get('location')), /ok=OpenAI key saved/);
+  assert.match(decodeURIComponent(save.headers.get('location')), /error=OpenAI saved, but the test failed: Key was rejected/);
 
   const raw = ctx.db.prepare("SELECT value FROM settings WHERE key = 'key:OPENAI_API_KEY'").get().value;
   assert.doesNotMatch(raw, /sk-live/);
@@ -210,4 +218,52 @@ test('every admin page renders', async () => {
   assert.equal(ctx.billing.rate('credits_per_1k_output'), 5);
   assert.equal(ctx.billing.rate('currency'), 'USD');
   assert.equal(ctx.billing.defaultPlan().slug, 'pro');
+});
+
+test('admin connects providers: tests keys, validates URLs/JSON, shows status', async () => {
+  const { req, signup, adminLogin } = setup();
+  await signup('boss@example.com');
+  const { cookie } = await adminLogin('boss@example.com');
+  const loc = (r) => decodeURIComponent(r.headers.get('location'));
+
+  // Saving a key tests it straight away against the provider.
+  calls.length = 0;
+  const ok = await req(ADMIN, '/keys', { method: 'POST', cookie, form: { env: 'ANTHROPIC_API_KEY', value: 'sk-ant-good-123456' } });
+  assert.match(loc(ok), /ok=Anthropic \(Claude\) saved and connected/);
+  assert.equal(calls[0].url, 'https://api.anthropic.com/v1/models?limit=1');
+  assert.equal(calls[0].headers['x-api-key'], 'sk-ant-good-123456');
+
+  let page = await (await req(ADMIN, '/keys', { cookie })).text();
+  assert.match(page, /Amazon Bedrock/);
+  assert.match(page, /Ollama server URL/);
+  assert.match(page, /OpenAI-compatible URL/);
+  assert.match(page, /Hyperbolic/);
+  assert.match(page, /pill ok">Connected/);
+
+  // URLs and JSON are validated; URLs are shown in full (not secret).
+  assert.match(loc(await req(ADMIN, '/keys', { method: 'POST', cookie, form: { env: 'OLLAMA_API_BASE_URL', value: 'not a url' } })), /not a valid URL/);
+  assert.match(loc(await req(ADMIN, '/keys', { method: 'POST', cookie, form: { env: 'AWS_BEDROCK_CONFIG', value: '{bad' } })), /not valid JSON/);
+  const bedrock = await req(ADMIN, '/keys', { method: 'POST', cookie, form: { env: 'AWS_BEDROCK_CONFIG', value: '{"region": "us-east-1", "accessKeyId": "A", "secretAccessKey": "B"}' } });
+  assert.match(loc(bedrock), /ok=Amazon Bedrock saved/);
+  await req(ADMIN, '/keys', { method: 'POST', cookie, form: { env: 'OLLAMA_API_BASE_URL', value: 'http://good-ollama:11434/' } });
+  assert.ok(calls.some((c) => c.url === 'http://good-ollama:11434/api/tags'));
+  page = await (await req(ADMIN, '/keys', { cookie })).text();
+  assert.match(page, /http:\/\/good-ollama:11434/);
+
+  // Dependent keys explain what's missing; a manual Test re-checks.
+  await req(ADMIN, '/keys', { method: 'POST', cookie, form: { env: 'OPENAI_LIKE_API_KEY', value: 'sk-good-x' } });
+  page = await (await req(ADMIN, '/keys', { cookie })).text();
+  assert.match(page, /Save the OpenAI-compatible URL first/);
+  const retest = await req(ADMIN, '/keys/test', { method: 'POST', cookie, form: { env: 'ANTHROPIC_API_KEY' } });
+  assert.match(loc(retest), /ok=Anthropic \(Claude\): Connected/);
+
+  // Test all.
+  const all = await req(ADMIN, '/keys/test-all', { method: 'POST', cookie });
+  assert.match(loc(all), /error=\d+ of \d+ connected/);
+
+  // Builder receives the AI keys and URLs, not payment keys.
+  const keys = (await (await req('platform', '/internal/provider-keys')).json()).keys;
+  assert.equal(keys.ANTHROPIC_API_KEY, 'sk-ant-good-123456');
+  assert.equal(keys.OLLAMA_API_BASE_URL, 'http://good-ollama:11434/');
+  assert.ok(keys.AWS_BEDROCK_CONFIG);
 });

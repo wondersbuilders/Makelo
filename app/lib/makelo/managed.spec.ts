@@ -13,7 +13,10 @@ async function load(managed: boolean) {
   };
 }
 
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
 
 describe('managed AI keys', () => {
   const header = cookie(
@@ -70,5 +73,27 @@ describe('managed AI keys', () => {
     expect(data.providers.map((p: any) => p.name)).not.toContain('Groq');
     expect(data.defaultProvider.name).toBe('Anthropic');
     expect(new Set(data.modelList.map((m: any) => m.provider))).not.toContain('Groq');
+  });
+
+  it('offers self-hosted providers once the admin sets their URL', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('{"data":[],"models":[]}', { status: 200 })),
+    );
+
+    const { models } = await load(true);
+
+    const res = await models.loader({
+      request: new Request('http://x/api/models'),
+      params: {},
+      context: { cloudflare: { env: { OLLAMA_API_BASE_URL: 'http://10.0.0.5:11434', TOGETHER_API_KEY: 'tk' } } },
+    });
+
+    const data = (await res.json()) as any;
+
+    expect(data.managedProviders).toContain('Ollama');
+    expect(data.managedProviders).toContain('Together');
+    expect(data.managedProviders).not.toContain('LMStudio');
+    expect(data.managedProviders).not.toContain('OpenAILike');
   });
 });

@@ -4,6 +4,8 @@ import { LLMManager } from '~/lib/modules/llm/manager';
 import type { ModelInfo } from '~/lib/modules/llm/types';
 import type { ProviderInfo } from '~/types/model';
 
+const URL_PROVIDERS = new Set(['OpenAILike', 'Ollama', 'LMStudio']);
+
 function rank(name: string) {
   const i = PREFERRED_PROVIDERS.indexOf(name);
   return i === -1 ? PREFERRED_PROVIDERS.length : i;
@@ -71,7 +73,16 @@ export async function loader({
     const env = (context.cloudflare?.env || {}) as Record<string, string>;
     managedProviders = llmManager
       .getAllProviders()
-      .filter((p) => p.config.apiTokenKey && (env[p.config.apiTokenKey] || process.env[p.config.apiTokenKey]))
+      .filter((p) => {
+        const has = (key?: string) => Boolean(key && (env[key] || process.env[key]));
+
+        // Self-hosted / OpenAI-compatible providers are available once the admin sets their URL.
+        if (URL_PROVIDERS.has(p.name)) {
+          return has(p.config.baseUrlKey);
+        }
+
+        return has(p.config.apiTokenKey);
+      })
       .map((p) => p.name)
       .sort((a, b) => rank(a) - rank(b));
 

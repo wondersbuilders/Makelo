@@ -184,7 +184,7 @@ export function createApp(config, { resolver, db: givenDb, sandboxProvider, fetc
   });
 
   // ---------- admin dashboard on its own host ----------
-  const adminApp = createAdminApp({ db, config, auth, sites, billing, settings, sandboxes, payments, limitAuth });
+  const adminApp = createAdminApp({ db, config, auth, sites, billing, settings, sandboxes, payments, limitAuth, fetchImpl });
 
   // Admin host → admin app; app host → builder API + accounts; anything else → published user sites.
   app.use('*', async (c, next) => {
