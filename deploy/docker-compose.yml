@@ -1,0 +1,48 @@
+# ClickMyApp production stack:  cd deploy && cp .env.example .env && docker compose up -d --build
+services:
+  builder:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: bolt-ai-production
+      args:
+        VITE_LOG_LEVEL: info
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      RUNNING_IN_DOCKER: "true"
+    restart: unless-stopped
+    expose: ["5173"]
+
+  platform:
+    build:
+      context: ../platform
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+      PORT: "8787"
+    volumes:
+      - platform-data:/data
+    restart: unless-stopped
+    expose: ["8787"]
+
+  caddy:
+    build:
+      context: .
+      dockerfile: caddy.Dockerfile
+    env_file: .env
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [builder, platform]
+    restart: unless-stopped
+
+volumes:
+  platform-data:
+  caddy-data:
+  caddy-config:

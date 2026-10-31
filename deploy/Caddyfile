@@ -1,0 +1,72 @@
+{
+	email {$ACME_EMAIL}
+	# Customer domains get a certificate only after the platform confirms they are verified.
+	on_demand_tls {
+		ask http://platform:8787/internal/tls-ask
+	}
+}
+
+(platform) {
+	reverse_proxy platform:8787
+}
+
+# One wildcard certificate covers app.<domain> and every free app subdomain.
+# (Avoids Let's Encrypt's 50-certificates-per-week limit on a single domain.)
+*.{$SITES_DOMAIN}, {$SITES_DOMAIN} {
+	tls {
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+	}
+
+	handle /internal/* {
+		respond 404
+	}
+
+	@app host {$APP_HOST}
+	handle @app {
+		# Accounts, dashboard and the publish API
+		handle /account* {
+			import platform
+		}
+		handle /api/platform/* {
+			import platform
+		}
+
+		# Logo files the login page needs before anyone is logged in
+		@public path /favicon.svg /favicon.ico /clickmyapp-*.svg /apple-touch-icon*.png
+		handle @public {
+			reverse_proxy builder:5173
+		}
+
+		# The AI builder: logged-in users only (stops strangers spending your AI credits)
+		handle {
+			forward_auth platform:8787 {
+				uri /api/platform/auth-check
+				copy_headers X-ClickMyApp-User
+			}
+			reverse_proxy builder:5173
+		}
+	}
+
+	@root host {$SITES_DOMAIN} www.{$SITES_DOMAIN}
+	handle @root {
+		redir https://{$APP_HOST}{uri}
+	}
+
+	# Everything else: published apps on free subdomains
+	handle {
+		import platform
+	}
+}
+
+# Customers' own domains (HTTPS issued on first visit, once verified)
+https:// {
+	tls {
+		on_demand
+	}
+	handle /internal/* {
+		respond 404
+	}
+	handle {
+		import platform
+	}
+}
