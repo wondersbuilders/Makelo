@@ -14,11 +14,10 @@ import { Messages, type DisplayMessage } from './Messages.client';
 import ProgressCompilation from './ProgressCompilation';
 import StarterTemplates from './StarterTemplates';
 import { ToolApprovalTray } from './ToolApprovalTray';
-import { ExamplePrompts } from '~/components/chat/ExamplePrompts';
 import { ImportFolderButton } from '~/components/chat/ImportFolderButton';
 import { ImportZipButton } from '~/components/chat/ImportZipButton';
 import DeployChatAlert from '~/components/deploy/DeployAlert';
-import { Menu } from '~/components/sidebar/Menu.client';
+import { HomeBackdrop, HomeGreeting, HomeRecent } from '~/components/home/HomeView.client';
 import type { ElementInfo } from '~/components/workbench/Inspector';
 import { WorkbenchReopenButton } from '~/components/workbench/WorkbenchReopenButton';
 import { API_KEYS_UPDATED_EVENT, type ApiKeysUpdatedDetail } from '~/lib/api/apiKeys';
@@ -139,7 +138,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
     const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
     const [apiKeys, setApiKeys] = useState<Record<string, string>>(getApiKeysFromCookies());
     const [modelList, setModelList] = useState<ModelInfo[]>([]);
-    const [isModelSettingsCollapsed, setIsModelSettingsCollapsed] = useState(false);
+    const [isModelSettingsCollapsed, setIsModelSettingsCollapsed] = useState(true);
     const [isListening, setIsListening] = useState(false);
     const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
     const [transcript, setTranscript] = useState('');
@@ -298,6 +297,22 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       }
     };
 
+    // Home: optional import / template panels (sidebar links open them via ?import=1 / ?templates=1)
+    const [homePanel, setHomePanel] = useState<'import' | 'templates' | null>(() => {
+      if (typeof window === 'undefined') {
+        return null;
+      }
+
+      const params = new URLSearchParams(window.location.search);
+
+      return params.has('import') ? 'import' : params.has('templates') ? 'templates' : null;
+    });
+
+    const pickSuggestion = (prompt: string) => {
+      handleInputChange?.({ target: { value: prompt } } as React.ChangeEvent<HTMLTextAreaElement>);
+      setTimeout(() => textareaRef?.current?.focus(), 0);
+    };
+
     const handleSendMessage = (event: React.UIEvent, messageInput?: string) => {
       if (sendMessage) {
         sendMessage(event, messageInput);
@@ -377,20 +392,15 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         className={classNames(styles.BaseChat, 'relative flex h-full w-full overflow-hidden')}
         data-chat-visible={showChat}
       >
-        <ClientOnly>{() => <Menu />}</ClientOnly>
+        {!chatStarted && <ClientOnly>{() => <HomeBackdrop />}</ClientOnly>}
         {chatStarted && showChat && !showWorkbench && (
           <WorkbenchReopenButton onClick={() => workbenchStore.showWorkbench.set(true)} />
         )}
         <div className="flex flex-col lg:flex-row overflow-y-auto w-full h-full">
           <div className={classNames(styles.Chat, 'flex flex-col flex-grow lg:min-w-[var(--chat-min-width)] h-full')}>
             {!chatStarted && (
-              <div id="intro" className="mt-[16vh] max-w-2xl mx-auto text-center px-4 lg:px-0">
-                <h1 className="text-3xl lg:text-6xl font-bold text-bolt-elements-textPrimary mb-4 animate-fade-in">
-                  Click. Describe. Launch.
-                </h1>
-                <p className="text-md lg:text-xl mb-8 text-bolt-elements-textSecondary animate-fade-in animation-delay-200">
-                  Build web apps and mobile apps by chatting with AI — then publish them to your own domain.
-                </p>
+              <div id="intro" className="relative z-1">
+                <ClientOnly>{() => <HomeRecent />}</ClientOnly>
               </div>
             )}
             <StickToBottom
@@ -421,10 +431,12 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                 <ScrollToBottom />
               </StickToBottom.Content>
               <div
-                className={classNames('my-auto flex flex-col gap-2 w-full max-w-chat mx-auto z-prompt mb-6', {
-                  'sticky bottom-2': chatStarted,
+                className={classNames('my-auto flex flex-col gap-2 w-full mx-auto z-prompt mb-6', {
+                  'sticky bottom-2 max-w-chat': chatStarted,
+                  'max-w-[880px]': !chatStarted,
                 })}
               >
+                {!chatStarted && <ClientOnly>{() => <HomeGreeting onPick={pickSuggestion} />}</ClientOnly>}
                 <div className="flex flex-col gap-2">
                   {deployAlert && (
                     <DeployChatAlert
@@ -495,47 +507,56 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                 />
               </div>
             </StickToBottom>
-            <div className="flex flex-col justify-center">
-              {!chatStarted && (
-                <div className="flex justify-center gap-2">
-                  <ImportFolderButton
-                    importChat={importChat}
+            {!chatStarted && (
+              <div className="relative z-1 flex flex-col items-center gap-4 pb-10 px-4">
+                <div className="flex items-center gap-1 text-[13px]">
+                  <button
                     className={classNames(
-                      'gap-2 bg-bolt-elements-background-depth-1',
-                      'text-bolt-elements-textPrimary',
-                      'hover:bg-bolt-elements-background-depth-2',
-                      'border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)]',
-                      'h-10 px-4 py-2 min-w-[120px] justify-center',
-                      'transition-all duration-200 ease-in-out rounded-lg',
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors bg-transparent',
+                      homePanel === 'import'
+                        ? 'bg-bolt-elements-background-depth-3 text-bolt-elements-textPrimary'
+                        : 'text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary',
                     )}
-                  />
-                  <ImportZipButton
-                    importChat={importChat}
+                    onClick={() => setHomePanel(homePanel === 'import' ? null : 'import')}
+                  >
+                    <span className="i-ph:download-simple" /> Import a project
+                  </button>
+                  <button
                     className={classNames(
-                      'gap-2 bg-bolt-elements-background-depth-1',
-                      'text-bolt-elements-textPrimary',
-                      'hover:bg-bolt-elements-background-depth-2',
-                      'border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)]',
-                      'h-10 px-4 py-2 min-w-[120px] justify-center',
-                      'transition-all duration-200 ease-in-out rounded-lg',
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors bg-transparent',
+                      homePanel === 'templates'
+                        ? 'bg-bolt-elements-background-depth-3 text-bolt-elements-textPrimary'
+                        : 'text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary',
                     )}
-                  />
-                  <GitCloneButton importChat={importChat} />
+                    onClick={() => setHomePanel(homePanel === 'templates' ? null : 'templates')}
+                  >
+                    <span className="i-ph:squares-four" /> Start from a template
+                  </button>
                 </div>
-              )}
-              <div className="flex flex-col gap-5">
-                {!chatStarted &&
-                  ExamplePrompts((event, messageInput) => {
-                    if (isStreaming) {
-                      handleStop?.();
-                      return;
-                    }
-
-                    handleSendMessage?.(event, messageInput);
-                  })}
-                {!chatStarted && <StarterTemplates />}
+                {homePanel === 'import' && (
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <ImportFolderButton
+                      importChat={importChat}
+                      className={classNames(
+                        'gap-2 bg-bolt-elements-background-depth-1 text-bolt-elements-textPrimary',
+                        'hover:bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor',
+                        'h-10 px-4 py-2 min-w-[120px] justify-center transition-all duration-200 ease-in-out rounded-xl',
+                      )}
+                    />
+                    <ImportZipButton
+                      importChat={importChat}
+                      className={classNames(
+                        'gap-2 bg-bolt-elements-background-depth-1 text-bolt-elements-textPrimary',
+                        'hover:bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor',
+                        'h-10 px-4 py-2 min-w-[120px] justify-center transition-all duration-200 ease-in-out rounded-xl',
+                      )}
+                    />
+                    <GitCloneButton importChat={importChat} />
+                  </div>
+                )}
+                {homePanel === 'templates' && <StarterTemplates />}
               </div>
-            </div>
+            )}
           </div>
           <ClientOnly>
             {() => (

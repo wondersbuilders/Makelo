@@ -1,7 +1,7 @@
 .BaseChat {
   &[data-chat-visible='false'] {
-    --workbench-inner-width: 100%;
-    --workbench-left: 0;
+    --workbench-inner-width: calc(100% - var(--sidebar-width));
+    --workbench-left: var(--sidebar-width);
 
     .Chat {
       --at-apply: bolt-ease-cubic-bezier;

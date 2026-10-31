@@ -150,13 +150,23 @@ export const DeployButton = ({
 
   return (
     <>
-      <div className="flex border border-bolt-elements-borderColor rounded-md overflow-hidden text-sm">
+      <div className="flex rounded-lg overflow-hidden text-sm">
         <DropdownMenu.Root>
           <DropdownMenu.Trigger
             disabled={isDeploying || !activePreview || isStreaming}
-            className="rounded-md items-center justify-center [&:is(:disabled,.disabled)]:cursor-not-allowed [&:is(:disabled,.disabled)]:opacity-60 px-3 py-1.5 text-xs bg-accent-500 text-white hover:text-bolt-elements-item-contentAccent [&:not(:disabled,.disabled)]:hover:bg-bolt-elements-button-primary-backgroundHover outline-accent-500 flex gap-1.7"
+            className="rounded-lg items-center justify-center [&:is(:disabled,.disabled)]:cursor-not-allowed [&:is(:disabled,.disabled)]:opacity-60 px-3.5 py-1.5 text-[13px] font-semibold flex gap-1.5 text-white bg-gradient-to-r from-violet-600 to-blue-600 hover:opacity-95 shadow-sm"
           >
-            {isDeploying ? `Publishing to ${deployingTo}...` : 'Publish'}
+            {isDeploying ? (
+              <>
+                <span className="i-ph:spinner animate-spin" />
+                {deployingTo === 'ClickMyApp' ? 'Publishing…' : `Deploying to ${deployingTo}…`}
+              </>
+            ) : (
+              <>
+                <span className="i-ph:rocket-launch" />
+                {liveSite ? 'Published' : 'Publish'}
+              </>
+            )}
             <span className={classNames('i-ph:caret-down transition-transform')} />
           </DropdownMenu.Trigger>
           <DropdownMenu.Content

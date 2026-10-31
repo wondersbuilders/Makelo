@@ -656,9 +656,15 @@
   --header-height: 54px;
   --chat-max-width: 33rem;
   --chat-min-width: 533px;
+  /*
+   * ClickMyApp: the persistent left sidebar sets --sidebar-width at runtime.
+   * --workbench-width sizes the in-flow placeholder (relative to the area beside the sidebar);
+   * --workbench-inner-width / --workbench-left size the fixed panel (relative to the window).
+   */
+  --sidebar-width: 0px;
   --workbench-width: min(calc(100% - var(--chat-min-width)), 2536px);
-  --workbench-inner-width: var(--workbench-width);
-  --workbench-left: calc(100% - var(--workbench-width));
+  --workbench-inner-width: min(calc(100% - var(--sidebar-width) - var(--chat-min-width)), 2536px);
+  --workbench-left: calc(100% - var(--workbench-inner-width));
 
   /* Toasts */
   --toastify-color-progress-success: var(--bolt-elements-icon-success);

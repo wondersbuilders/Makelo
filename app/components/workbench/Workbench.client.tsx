@@ -18,7 +18,6 @@ import {
   type OnScrollCallback as OnEditorScroll,
 } from '~/components/editor/codemirror/CodeMirrorEditor';
 import { IconButton } from '~/components/ui/IconButton';
-import { Slider, type SliderOptions } from '~/components/ui/Slider';
 import useViewport from '~/lib/hooks';
 import { chatStore } from '~/lib/stores/chat';
 import { usePreviewStore } from '~/lib/stores/previews';
@@ -49,20 +48,55 @@ interface WorkspaceProps {
 
 const viewTransition = { ease: cubicEasingFn };
 
-const sliderOptions: SliderOptions<WorkbenchViewType> = {
-  left: {
-    value: 'code',
-    text: 'Code',
-  },
-  middle: {
-    value: 'diff',
-    text: 'Diff',
-  },
-  right: {
-    value: 'preview',
-    text: 'Preview',
-  },
-};
+const VIEW_TABS: { value: WorkbenchViewType; label: string; icon: string }[] = [
+  { value: 'preview', label: 'Preview', icon: 'i-ph:monitor' },
+  { value: 'code', label: 'Code', icon: 'i-ph:code' },
+  { value: 'diff', label: 'Changes', icon: 'i-ph:git-diff' },
+];
+
+/** Tab strip for the right-hand pane (Preview / Code / Changes) plus a terminal toggle. */
+function ViewTabs({
+  selected,
+  onSelect,
+  terminalOpen,
+}: {
+  selected: WorkbenchViewType;
+  onSelect: (view: WorkbenchViewType) => void;
+  terminalOpen: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      {VIEW_TABS.map((tab) => (
+        <button
+          key={tab.value}
+          onClick={() => onSelect(tab.value)}
+          className={classNames(
+            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors',
+            selected === tab.value
+              ? 'bg-bolt-elements-background-depth-1 text-bolt-elements-textPrimary border border-bolt-elements-borderColor shadow-sm'
+              : 'text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary hover:bg-bolt-elements-background-depth-3 border border-transparent',
+          )}
+        >
+          <span className={classNames(tab.icon, 'text-base')} />
+          {tab.label}
+        </button>
+      ))}
+      <button
+        onClick={() => workbenchStore.toggleTerminal(!terminalOpen)}
+        title={terminalOpen ? 'Hide terminal' : 'Show terminal'}
+        className={classNames(
+          'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors border',
+          terminalOpen
+            ? 'text-bolt-elements-textPrimary bg-bolt-elements-background-depth-3 border-transparent'
+            : 'text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary hover:bg-bolt-elements-background-depth-3 border-transparent',
+        )}
+      >
+        <span className="i-ph:terminal-window text-base" />
+        Terminal
+      </button>
+    </div>
+  );
+}
 
 const workbenchVariants = {
   closed: {
@@ -438,8 +472,8 @@ export const Workbench = memo(
             )}
           >
             <div className="absolute inset-0 px-2 lg:px-4">
-              <div className="h-full flex flex-col bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor shadow-sm rounded-lg overflow-hidden">
-                <div className="flex items-center px-3 py-2 border-b border-bolt-elements-borderColor gap-1.5">
+              <div className="h-full flex flex-col bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor shadow-sm rounded-2xl overflow-hidden">
+                <div className="flex items-center px-2.5 py-2 border-b border-bolt-elements-borderColor gap-1.5">
                   <button
                     className={`${showChat ? 'i-ph:sidebar-simple-fill' : 'i-ph:sidebar-simple'} text-lg text-bolt-elements-textSecondary mr-1`}
                     disabled={!canHideChat || isSmallViewport}
@@ -449,7 +483,7 @@ export const Workbench = memo(
                       }
                     }}
                   />
-                  <Slider selected={selectedView} options={sliderOptions} setSelected={setSelectedView} />
+                  <ViewTabs selected={selectedView} onSelect={setSelectedView} terminalOpen={showTerminal} />
                   <div className="ml-auto" />
                   {selectedView === 'code' && (
                     <div className="flex overflow-y-auto">

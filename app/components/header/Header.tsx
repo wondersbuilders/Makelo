@@ -2,47 +2,65 @@ import { useStore } from '@nanostores/react';
 import { ClientOnly } from 'remix-utils/client-only';
 import { AccountMenu } from './AccountMenu.client';
 import { HeaderActionButtons } from './HeaderActionButtons.client';
+import { PLATFORM_URL, platformUser } from '~/lib/clickmyapp/platform';
 import { ChatDescription } from '~/lib/persistence/ChatDescription.client';
 import { chatStore } from '~/lib/stores/chat';
+import { sidebarMobileOpen } from '~/lib/stores/sidebar';
 import { classNames } from '~/utils/classNames';
 
+/** Slim project bar: project name on the left, publish + sharing on the right. Branding lives in the sidebar. */
 export function Header() {
   const chat = useStore(chatStore);
 
   return (
     <header
-      className={classNames('flex items-center px-4 border-b h-[var(--header-height)]', {
+      className={classNames('flex items-center gap-2 px-3 lg:px-4 h-[var(--header-height)] border-b', {
         'border-transparent': !chat.started,
-        'border-bolt-elements-borderColor': chat.started,
+        'border-bolt-elements-borderColor bg-bolt-elements-background-depth-1': chat.started,
       })}
     >
-      <div className="flex items-center gap-2 z-logo text-bolt-elements-textPrimary cursor-pointer">
-        <div className="i-ph:sidebar-simple-duotone text-xl" />
-        <a href="/" className="text-2xl font-semibold text-accent flex items-center">
-          {/* <span className="i-bolt:logo-text?mask w-[46px] inline-block" /> */}
-          <img src="/clickmyapp-logo-light.svg" alt="ClickMyApp" className="w-[130px] inline-block dark:hidden" />
-          <img src="/clickmyapp-logo-dark.svg" alt="ClickMyApp" className="w-[130px] inline-block hidden dark:block" />
-        </a>
-      </div>
-      {chat.started ? ( // Display ChatDescription and HeaderActionButtons only when the chat has started.
+      <button
+        className="lg:hidden p-1.5 -ml-1 rounded-md text-bolt-elements-textSecondary hover:bg-bolt-elements-background-depth-2"
+        title="Menu"
+        onClick={() => sidebarMobileOpen.set(true)}
+      >
+        <div className="i-ph:list text-xl" />
+      </button>
+
+      {chat.started ? (
         <>
-          <span className="flex-1 px-4 truncate text-center text-bolt-elements-textPrimary">
-            <ClientOnly>{() => <ChatDescription />}</ClientOnly>
-          </span>
-          <ClientOnly>
-            {() => (
-              <div className="">
-                <HeaderActionButtons chatStarted={chat.started} />
-              </div>
-            )}
-          </ClientOnly>
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="i-ph:app-window-duotone text-xl text-accent-500 flex-shrink-0" />
+            <span className="truncate font-medium text-[15px] text-bolt-elements-textPrimary">
+              <ClientOnly>{() => <ChatDescription />}</ClientOnly>
+            </span>
+          </div>
+          <ClientOnly>{() => <HeaderActionButtons chatStarted={chat.started} />}</ClientOnly>
         </>
       ) : (
         <span className="flex-1" />
       )}
-      <div className="ml-2">
-        <ClientOnly>{() => <AccountMenu />}</ClientOnly>
-      </div>
+
+      <ClientOnly>{() => <SignedOutActions />}</ClientOnly>
     </header>
+  );
+}
+
+/** Account lives in the sidebar; the header only offers log in / connect when needed. */
+function SignedOutActions() {
+  const user = useStore(platformUser);
+
+  if (user && !PLATFORM_URL) {
+    return null;
+  }
+
+  if (user && PLATFORM_URL) {
+    return null;
+  }
+
+  return (
+    <div className="ml-1">
+      <AccountMenu />
+    </div>
   );
 }
