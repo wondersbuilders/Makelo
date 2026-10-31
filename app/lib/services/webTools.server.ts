@@ -14,7 +14,7 @@ const REQUEST_TIMEOUT_MS = 10_000;
 const SEARCH_ENDPOINT = 'https://html.duckduckgo.com/html/';
 
 const FETCH_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (compatible; ClickMyApp/1.0; +https://clickmyapp.com)',
+  'User-Agent': 'Mozilla/5.0 (compatible; Makelo/1.0; +https://makelo.com)',
   Accept: 'text/html,application/xhtml+xml,text/plain;q=0.9',
   'Accept-Language': 'en-US,en;q=0.5',
 };

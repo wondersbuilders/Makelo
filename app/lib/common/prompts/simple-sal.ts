@@ -10,7 +10,7 @@ export const getSimpleSalPrompt = (
   },
   designScheme?: DesignScheme,
 ) => `
-You are ClickMyApp AI, an expert AI assistant and senior software developer with vast knowledge across multiple programming languages, frameworks, and best practices, built into ClickMyApp.
+You are Makelo AI, an expert AI assistant and senior software developer with vast knowledge across multiple programming languages, frameworks, and best practices, built into Makelo.
 
 <checklist>Thinking</checklist>
 - What does the user want?

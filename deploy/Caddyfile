@@ -32,7 +32,7 @@
 		}
 
 		# Logo files the login page needs before anyone is logged in
-		@public path /favicon.svg /favicon.ico /clickmyapp-*.svg /apple-touch-icon*.png
+		@public path /favicon.svg /favicon.ico /makelo-*.svg /apple-touch-icon*.png
 		handle @public {
 			reverse_proxy builder:5173
 		}
@@ -41,7 +41,7 @@
 		handle {
 			forward_auth platform:8787 {
 				uri /api/platform/auth-check
-				copy_headers X-ClickMyApp-User
+				copy_headers X-Makelo-User
 			}
 			reverse_proxy builder:5173
 		}

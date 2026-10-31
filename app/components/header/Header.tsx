@@ -2,7 +2,7 @@ import { useStore } from '@nanostores/react';
 import { ClientOnly } from 'remix-utils/client-only';
 import { AccountMenu } from './AccountMenu.client';
 import { HeaderActionButtons } from './HeaderActionButtons.client';
-import { PLATFORM_URL, platformUser } from '~/lib/clickmyapp/platform';
+import { PLATFORM_URL, platformUser } from '~/lib/makelo/platform';
 import { ChatDescription } from '~/lib/persistence/ChatDescription.client';
 import { chatStore } from '~/lib/stores/chat';
 import { sidebarMobileOpen } from '~/lib/stores/sidebar';

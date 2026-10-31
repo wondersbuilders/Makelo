@@ -28,7 +28,7 @@ export default async function handleRequest(
    * `credentialless` is used because the preview iframe and the
    * COEP header would otherwise block every third-party subresource.
    */
-  // ClickMyApp cloud sandboxes don't need cross-origin isolation, and it would block their preview iframes.
+  // Makelo cloud sandboxes don't need cross-origin isolation, and it would block their preview iframes.
   if (import.meta.env.VITE_SANDBOX_MODE !== 'cloud') {
     responseHeaders.set('Cross-Origin-Embedder-Policy', 'credentialless');
     responseHeaders.set('Cross-Origin-Opener-Policy', 'same-origin');

@@ -1,5 +1,5 @@
 import { useStore } from '@nanostores/react';
-import { platformUser, publishedSites } from '~/lib/clickmyapp/platform';
+import { platformUser, publishedSites } from '~/lib/makelo/platform';
 import { recentProjects, timeAgo } from '~/lib/stores/sidebar';
 import { classNames } from '~/utils/classNames';
 

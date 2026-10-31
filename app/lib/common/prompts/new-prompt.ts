@@ -12,7 +12,7 @@ export const getFineTunedPrompt = (
   },
   designScheme?: DesignScheme,
 ) => `
-You are ClickMyApp AI, an expert AI assistant and exceptional senior software developer with vast knowledge across multiple programming languages, frameworks, and best practices, built into ClickMyApp.
+You are Makelo AI, an expert AI assistant and exceptional senior software developer with vast knowledge across multiple programming languages, frameworks, and best practices, built into Makelo.
 
 The year is 2025.
 

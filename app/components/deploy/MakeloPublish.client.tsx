@@ -2,7 +2,7 @@ import { useStore } from '@nanostores/react';
 import { useState } from 'react';
 import { toast } from 'react-toastify';
 import { formatBuildFailureOutput } from './deployUtils';
-import { accountUrl, bytesToBase64, PlatformError, platformUser, publishFiles } from '~/lib/clickmyapp/platform';
+import { accountUrl, bytesToBase64, PlatformError, platformUser, publishFiles } from '~/lib/makelo/platform';
 import { chatId, description } from '~/lib/persistence/useChatHistory';
 import type { ActionCallbackData } from '~/lib/runtime/message-parser';
 import { workbenchStore } from '~/lib/stores/workbench';
@@ -12,17 +12,17 @@ import { path } from '~/utils/path';
 const OUTPUT_DIRS = ['/dist', '/build', '/out', '/output', '/web-build', '/public'];
 
 /**
- * Builds the current project and publishes it to the user's free *.clickmyapp.com subdomain.
+ * Builds the current project and publishes it to the user's free *.makelo.com subdomain.
  * Works for web apps (Vite, Next static export, Astro, ...) and Expo mobile apps (web export).
  */
-export function useClickMyAppPublish() {
+export function useMakeloPublish() {
   const [isPublishing, setIsPublishing] = useState(false);
   const currentChatId = useStore(chatId);
   const user = useStore(platformUser);
 
   const publish = async (): Promise<boolean> => {
     if (!user) {
-      toast.info('Log in to ClickMyApp to publish your app.');
+      toast.info('Log in to Makelo to publish your app.');
       window.location.href = accountUrl(`/account/login?next=${encodeURIComponent(window.location.pathname)}`);
 
       return false;
@@ -43,16 +43,16 @@ export function useClickMyAppPublish() {
     setIsPublishing(true);
 
     workbenchStore.addArtifact({
-      id: 'clickmyapp-publish',
-      messageId: 'clickmyapp-publish',
+      id: 'makelo-publish',
+      messageId: 'makelo-publish',
       title: 'Publishing',
       type: 'standalone',
     });
 
-    const alerts = workbenchStore.artifacts.get()['clickmyapp-publish'].runner;
+    const alerts = workbenchStore.artifacts.get()['makelo-publish'].runner;
 
     try {
-      alerts.handleDeployAction('building', 'running', { source: 'clickmyapp' });
+      alerts.handleDeployAction('building', 'running', { source: 'makelo' });
 
       const container = await webcontainer;
 
@@ -73,7 +73,7 @@ export function useClickMyAppPublish() {
       }
 
       const actionData: ActionCallbackData = {
-        messageId: 'clickmyapp build',
+        messageId: 'makelo build',
         artifactId: artifact.id,
         actionId: `build-${Date.now()}`,
         action: { type: 'build' as const, content: buildCommand },
@@ -87,12 +87,12 @@ export function useClickMyAppPublish() {
       if (!buildOutput || buildOutput.exitCode !== 0) {
         alerts.handleDeployAction('building', 'failed', {
           error: formatBuildFailureOutput(buildOutput?.output),
-          source: 'clickmyapp',
+          source: 'makelo',
         });
         throw new Error('Build failed — ask the AI to fix the build error, then publish again.');
       }
 
-      alerts.handleDeployAction('deploying', 'running', { source: 'clickmyapp' });
+      alerts.handleDeployAction('deploying', 'running', { source: 'makelo' });
 
       const reported = buildOutput.path.replace('/home/project', '');
 
@@ -137,7 +137,7 @@ export function useClickMyAppPublish() {
         files,
       });
 
-      alerts.handleDeployAction('complete', 'complete', { url: site.url, source: 'clickmyapp' });
+      alerts.handleDeployAction('complete', 'complete', { url: site.url, source: 'makelo' });
       toast.success(
         <div>
           Your app is live!{' '}
@@ -152,11 +152,11 @@ export function useClickMyAppPublish() {
     } catch (err) {
       const message =
         err instanceof PlatformError && err.status === 401
-          ? 'Your ClickMyApp login expired — log in again.'
+          ? 'Your Makelo login expired — log in again.'
           : err instanceof Error
             ? err.message
             : 'Publishing failed.';
-      alerts.handleDeployAction('deploying', 'failed', { error: message, source: 'clickmyapp' });
+      alerts.handleDeployAction('deploying', 'failed', { error: message, source: 'makelo' });
       toast.error(message);
 
       return false;

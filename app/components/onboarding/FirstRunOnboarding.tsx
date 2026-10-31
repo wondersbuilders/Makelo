@@ -208,7 +208,7 @@ export function FirstRunOnboarding() {
               />
             ))}
           </div>
-          <DialogTitle className="text-xl font-semibold">Welcome to ClickMyApp</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">Welcome to Makelo</DialogTitle>
           <DialogDescription className="mt-1 text-sm !text-[#a09baa]">
             Let’s get your workspace ready. Optional details can be left blank and changed later in Settings.
           </DialogDescription>

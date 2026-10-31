@@ -31,7 +31,7 @@ export default defineConfig((config) => {
     },
 
     /*
-     * ClickMyApp: the builder runs behind Caddy at APP_HOST (e.g. app.clickmyapp.com).
+     * Makelo: the builder runs behind Caddy at APP_HOST (e.g. app.makelo.com).
      * Vite rejects unknown Host headers, so allow the configured public host.
      */
     preview: {

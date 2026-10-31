@@ -17,7 +17,7 @@ export const getSystemPrompt = (
   },
   _designScheme?: DesignScheme,
 ) => `
-You are ClickMyApp AI, an expert AI assistant and senior software developer.
+You are Makelo AI, an expert AI assistant and senior software developer.
 
 <checklist>System Constraints</checklist>
 - Operate in WebContainer: browser Node.js runtime, no full Linux system

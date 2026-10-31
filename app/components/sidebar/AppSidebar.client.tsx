@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 import type { TabType } from '~/components/@settings/core/types';
 import { DocumentationPanel } from '~/components/ui/DocumentationPanel';
 import { ThemeSwitch } from '~/components/ui/ThemeSwitch';
-import { accountUrl, PLATFORM_URL, platformUser, publishedSites } from '~/lib/clickmyapp/platform';
+import { accountUrl, PLATFORM_URL, platformUser, publishedSites } from '~/lib/makelo/platform';
 import { chatId, db, deleteById, type ChatHistoryItem } from '~/lib/persistence';
 import {
   pinnedProjects,
@@ -43,7 +43,7 @@ function useIsMobile() {
 const navItem =
   'flex items-center gap-3 w-full rounded-lg px-2.5 py-2 text-[14px] text-bolt-elements-textPrimary bg-transparent hover:bg-bolt-elements-background-depth-3 transition-colors';
 
-/** ClickMyApp's persistent left sidebar: workspace, New, navigation, pinned + recent projects, account. */
+/** Makelo's persistent left sidebar: workspace, New, navigation, pinned + recent projects, account. */
 export function AppSidebar() {
   const collapsedPref = useStore(sidebarCollapsed);
   const mobileOpen = useStore(sidebarMobileOpen);
@@ -119,9 +119,9 @@ export function AppSidebar() {
     >
       {/* Logo + search / collapse */}
       <div className={classNames('flex items-center h-[54px] px-3', collapsed ? 'justify-center' : 'justify-between')}>
-        <a href="/" className="flex items-center gap-2" title="ClickMyApp home">
-          <img src="/clickmyapp-mark.svg" alt="ClickMyApp" className="w-7 h-7" />
-          {!collapsed && <span className="font-bold text-[15px] text-bolt-elements-textPrimary">ClickMyApp</span>}
+        <a href="/" className="flex items-center gap-2" title="Makelo home">
+          <img src="/makelo-mark.svg" alt="Makelo" className="w-7 h-7" />
+          {!collapsed && <span className="font-bold text-[15px] text-bolt-elements-textPrimary">Makelo</span>}
         </a>
         {!collapsed && (
           <div className="flex items-center gap-0.5">

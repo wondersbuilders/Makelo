@@ -1,4 +1,4 @@
-# Caddy with the Cloudflare DNS plugin, needed for the *.clickmyapp.com wildcard certificate.
+# Caddy with the Cloudflare DNS plugin, needed for the *.makelo.com wildcard certificate.
 FROM caddy:2-builder AS builder
 RUN xcaddy build --with github.com/caddy-dns/cloudflare
 

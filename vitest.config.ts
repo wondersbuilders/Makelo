@@ -89,7 +89,7 @@ const EXCLUDE = [
   '**/tests/e2e/**', // Exclude e2e tests that require Playwright
   'app/components/chat/Markdown.spec.ts', // Exclude - imports cause issues with import.meta.hot
   'app/lib/stores/workbench.spec.ts', // Exclude - imports cause issues with import.meta.hot
-  'platform/**', // ClickMyApp platform service has its own node:test suite (cd platform && npm test)
+  'platform/**', // Makelo platform service has its own node:test suite (cd platform && npm test)
 ];
 
 const SHARED = {

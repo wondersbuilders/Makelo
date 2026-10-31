@@ -8,7 +8,7 @@ import {
   PLATFORM_URL,
   platformUser,
   setAccessToken,
-} from '~/lib/clickmyapp/platform';
+} from '~/lib/makelo/platform';
 
 const linkClass =
   'px-3 py-1.5 text-xs rounded-md border border-bolt-elements-borderColor text-bolt-elements-textPrimary hover:bg-bolt-elements-item-backgroundActive';
@@ -40,10 +40,10 @@ export function AccountMenu() {
             if (await loadPlatformUser()) {
               loadPublishedSites();
               setAskToken(false);
-              toast.success('Connected to your ClickMyApp account.');
+              toast.success('Connected to your Makelo account.');
             } else {
               setAccessToken(null);
-              toast.error('That token did not work. Create a new one on your ClickMyApp dashboard.');
+              toast.error('That token did not work. Create a new one on your Makelo dashboard.');
             }
           }}
         >
@@ -60,7 +60,7 @@ export function AccountMenu() {
         </form>
       ) : (
         <button className={linkClass} onClick={() => setAskToken(true)}>
-          Connect ClickMyApp account
+          Connect Makelo account
         </button>
       );
     }

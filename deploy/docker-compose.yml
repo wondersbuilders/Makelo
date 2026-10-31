@@ -1,4 +1,4 @@
-# ClickMyApp production stack:  cd deploy && cp .env.example .env && docker compose up -d --build
+# Makelo production stack:  cd deploy && cp .env.example .env && docker compose up -d --build
 services:
   builder:
     build:

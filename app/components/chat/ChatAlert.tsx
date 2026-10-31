@@ -15,8 +15,8 @@ export default function ChatAlert({ alert, clearAlert, postMessage }: Props) {
   const title = isPreview ? 'Preview Error' : 'Terminal Error';
 
   const message = isPreview
-    ? 'We encountered an error while running the preview. Would you like ClickMyApp AI to analyze and help resolve this issue?'
-    : 'We encountered an error while running terminal commands. Would you like ClickMyApp AI to analyze and help resolve this issue?';
+    ? 'We encountered an error while running the preview. Would you like Makelo AI to analyze and help resolve this issue?'
+    : 'We encountered an error while running terminal commands. Would you like Makelo AI to analyze and help resolve this issue?';
 
   return (
     <AnimatePresence>

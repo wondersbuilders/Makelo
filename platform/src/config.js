@@ -3,18 +3,18 @@ import path from 'node:path';
 /**
  * All settings come from environment variables so the same build runs locally and in production.
  *
- *   APP_HOST       host serving the builder + account pages        e.g. app.clickmyapp.com
- *   SITES_DOMAIN   parent domain for free subdomains               e.g. clickmyapp.com  -> myapp-x7k2.clickmyapp.com
+ *   APP_HOST       host serving the builder + account pages        e.g. app.makelo.com
+ *   SITES_DOMAIN   parent domain for free subdomains               e.g. makelo.com  -> myapp-x7k2.makelo.com
  *   PUBLIC_SCHEME  scheme used when printing URLs                  https (use http for local testing)
  *   PORT           port the platform listens on                    8787
  *   DATA_DIR       where the database and published files live     ./data
- *   CNAME_TARGET   hostname customers point their CNAME at         sites.clickmyapp.com
+ *   CNAME_TARGET   hostname customers point their CNAME at         sites.makelo.com
  *   SERVER_IPV4    public IP customers use for apex A records      (your VPS IP)
  *   SECURE_COOKIES "false" only for local http testing
  *   CORS_ORIGINS   comma list of extra origins allowed to call the JSON API with a bearer token (desktop app)
  */
 export function loadConfig(env = process.env) {
-  const sitesDomain = (env.SITES_DOMAIN || 'clickmyapp.com').toLowerCase();
+  const sitesDomain = (env.SITES_DOMAIN || 'makelo.com').toLowerCase();
   const appHost = (env.APP_HOST || `app.${sitesDomain}`).toLowerCase();
 
   return {
@@ -54,5 +54,5 @@ export function loadConfig(env = process.env) {
 export const RESERVED_SLUGS = new Set([
   'app', 'www', 'api', 'admin', 'mail', 'smtp', 'imap', 'ftp', 'docs', 'help', 'support', 'status',
   'blog', 'downloads', 'download', 'cdn', 'static', 'assets', 'sites', 'dashboard', 'account', 'login',
-  'signup', 'billing', 'ns1', 'ns2', 'dev', 'staging', 'test', 'clickmyapp',
+  'signup', 'billing', 'ns1', 'ns2', 'dev', 'staging', 'test', 'makelo',
 ]);

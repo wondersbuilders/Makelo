@@ -2,7 +2,7 @@ import { WebContainer } from '@webcontainer/api';
 import { WORK_DIR_NAME } from '~/utils/constants';
 import { cleanStackTrace } from '~/utils/stacktrace';
 
-/** 'cloud' = e2b sandboxes via the ClickMyApp platform; anything else = in-browser WebContainers. */
+/** 'cloud' = e2b sandboxes via the Makelo platform; anything else = in-browser WebContainers. */
 export const SANDBOX_MODE: string = import.meta.env.VITE_SANDBOX_MODE || 'webcontainer';
 
 interface WebContainerContext {
@@ -27,7 +27,7 @@ if (!import.meta.env.SSR) {
     Promise.resolve()
       .then(async () => {
         /*
-         * ClickMyApp: with VITE_SANDBOX_MODE=cloud, projects run in a cloud sandbox (e2b.dev)
+         * Makelo: with VITE_SANDBOX_MODE=cloud, projects run in a cloud sandbox (e2b.dev)
          * through the platform service instead of StackBlitz WebContainers in the browser.
          */
         if (SANDBOX_MODE === 'cloud') {

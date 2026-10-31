@@ -8,15 +8,15 @@ import { AppSidebar } from '~/components/sidebar/AppSidebar.client';
 
 export const meta: MetaFunction = () => {
   return [
-    { title: 'ClickMyApp' },
-    { name: 'description', content: 'Build web and mobile apps by chatting with AI — ClickMyApp' },
+    { title: 'Makelo' },
+    { name: 'description', content: 'Build web and mobile apps by chatting with AI — Makelo' },
   ];
 };
 
 export const loader = () => Response.json({});
 
 /**
- * ClickMyApp builder: persistent sidebar + chat + workbench
+ * Makelo builder: persistent sidebar + chat + workbench
  * Note: Settings functionality should ONLY be accessed through the sidebar menu.
  * Do not add settings button/panel to this landing page as it was intentionally removed
  * to keep the UI clean and consistent with the design system.

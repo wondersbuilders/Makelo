@@ -62,6 +62,6 @@ test-results
 test-results.json
 test-results-summary.txt
 
-# ClickMyApp platform
+# Makelo platform
 platform/data/
 deploy/.env

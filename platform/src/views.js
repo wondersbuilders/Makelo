@@ -1,7 +1,7 @@
 const esc = (v) =>
   String(v ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 
-const LOGO = `<svg viewBox="0 0 230 48" height="30" aria-label="ClickMyApp"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7C3AED"/><stop offset="1" stop-color="#2563EB"/></linearGradient></defs><rect x="0" y="4" width="40" height="40" rx="9" fill="url(#g)"/><path d="M14 13 L14 32 L19 27.3 L22.5 34.5 L26 33 L22.6 25.9 L29 25.5 Z" fill="#fff" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/><text x="50" y="33" font-family="Inter,Segoe UI,Helvetica,Arial,sans-serif" font-size="25" font-weight="700" fill="currentColor">Click<tspan fill="#7C3AED">My</tspan>App</text></svg>`;
+const LOGO = `<svg viewBox="0 0 230 48" height="30" aria-label="Makelo"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7C3AED"/><stop offset="1" stop-color="#2563EB"/></linearGradient></defs><rect x="0" y="4" width="40" height="40" rx="9" fill="url(#g)"/><path d="M14 13 L14 32 L19 27.3 L22.5 34.5 L26 33 L22.6 25.9 L29 25.5 Z" fill="#fff" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/><text x="50" y="33" font-family="Inter,Segoe UI,Helvetica,Arial,sans-serif" font-size="25" font-weight="700" fill="currentColor">Make<tspan fill="#7C3AED">lo</tspan></text></svg>`;
 
 const CSS = `
 :root{--bg:#f7f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--accent:#7c3aed;--accent2:#2563eb;--ok:#059669;--warn:#b45309;--bad:#dc2626;--code:#f3f4f6}
@@ -30,7 +30,7 @@ export function layout({ title, user, body, flash }) {
     : `<nav><a href="/account/login">Log in</a><a class="btn" href="/account/signup">Sign up free</a></nav>`;
 
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(title)} · ClickMyApp</title><link rel="icon" href="/favicon.svg"><style>${CSS}</style></head>
+<title>${esc(title)} · Makelo</title><link rel="icon" href="/favicon.svg"><style>${CSS}</style></head>
 <body><header><a class="logo" href="/">${LOGO}</a>${nav}</header><main>${flashHtml}${body}</main></body></html>`;
 }
 
@@ -68,7 +68,7 @@ export function dashboardPage({ user, sites, siteUrl, tokens, newToken, flash })
           <a class="btn" href="/account/apps/${s.id}">Settings &amp; domains</a></div></div>`,
         )
         .join('')
-    : `<div class="card"><h2>No apps yet</h2><p class="muted">Open the <a href="/">builder</a>, describe your app, then press <b>Publish → ClickMyApp</b>. It goes live on a free subdomain instantly.</p></div>`;
+    : `<div class="card"><h2>No apps yet</h2><p class="muted">Open the <a href="/">builder</a>, describe your app, then press <b>Publish → Makelo</b>. It goes live on a free subdomain instantly.</p></div>`;
 
   const tokenRows = tokens
     .map(
@@ -84,7 +84,7 @@ export function dashboardPage({ user, sites, siteUrl, tokens, newToken, flash })
     body: `<div class="row" style="align-items:center;margin-bottom:12px"><h1>My apps</h1><div style="text-align:right"><a class="btn" href="/">+ Build a new app</a></div></div>
       <div class="apps">${apps}</div>
       <div class="card"><h2>Desktop app access</h2>
-        <p class="muted">The ClickMyApp desktop app publishes to your account with an access token. Paste it into the desktop app when it asks.</p>
+        <p class="muted">The Makelo desktop app publishes to your account with an access token. Paste it into the desktop app when it asks.</p>
         ${newToken ? `<div class="flash ok">Copy this now — it won't be shown again:<br><code>${esc(newToken)}</code></div>` : ''}
         ${tokenRows ? `<table><tr><th>Name</th><th>Created</th><th></th></tr>${tokenRows}</table><p></p>` : ''}
         <form method="post" action="/account/tokens" class="row"><div><label for="tname">Token name</label><input id="tname" name="name" value="My laptop"></div><button>Create token</button></form>
@@ -136,9 +136,9 @@ export function appPage({ user, site, siteUrl, domains, instructions, deploys, f
   });
 }
 
-export function placeholderPage({ title, message, href = 'https://clickmyapp.com' }) {
+export function placeholderPage({ title, message, href = 'https://makelo.com' }) {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title>
 <style>${CSS} body{display:grid;place-items:center;min-height:100vh;text-align:center}</style></head>
 <body><div class="card narrow"><div style="color:var(--text)">${LOGO}</div><h1 style="margin-top:16px">${esc(title)}</h1><p class="muted">${esc(message)}</p>
-<a class="btn" href="${esc(href)}">Build your own app with ClickMyApp</a></div></body></html>`;
+<a class="btn" href="${esc(href)}">Build your own app with Makelo</a></div></body></html>`;
 }

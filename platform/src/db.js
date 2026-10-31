@@ -54,7 +54,7 @@ const MIGRATIONS = [
 export function openDb(dataDir) {
   fs.mkdirSync(dataDir, { recursive: true });
 
-  const db = new Database(path.join(dataDir, 'clickmyapp.db'));
+  const db = new Database(path.join(dataDir, 'makelo.db'));
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.pragma('busy_timeout = 5000');

@@ -125,7 +125,7 @@ export async function getTemplates(templateName: string, title?: string, signal?
   }
 
   const assistantMessage = `
-ClickMyApp is setting up your project with the required files using the ${template.name} template.
+Makelo is setting up your project with the required files using the ${template.name} template.
 <boltArtifact id="imported-files" title="${title || 'Create initial files'}" type="bundled">
 ${filesToImport.files
   .map(

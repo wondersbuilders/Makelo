@@ -118,7 +118,7 @@ export const AvatarDropdown = ({ onSelectTab, onOpenDocs }: AvatarDropdownProps)
               'outline-none',
               'group',
             )}
-            onClick={() => window.open('mailto:support@clickmyapp.com?subject=ClickMyApp%20bug%20report', '_blank')}
+            onClick={() => window.open('mailto:support@makelo.com?subject=Makelo%20bug%20report', '_blank')}
           >
             <div className="i-ph:bug w-4 h-4 text-gray-400 group-hover:text-purple-500 dark:group-hover:text-purple-400 transition-colors" />
             Report Bug

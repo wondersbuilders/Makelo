@@ -3,14 +3,14 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useState } from 'react';
 import { NetlifyDeploymentLink } from '~/components/chat/NetlifyDeploymentLink.client';
 import { VercelDeploymentLink } from '~/components/chat/VercelDeploymentLink.client';
-import { useClickMyAppPublish } from '~/components/deploy/ClickMyAppPublish.client';
 import { useGitHubDeploy } from '~/components/deploy/GitHubDeploy.client';
 import { GitHubDeploymentDialog } from '~/components/deploy/GitHubDeploymentDialog';
 import { useGitLabDeploy } from '~/components/deploy/GitLabDeploy.client';
 import { GitLabDeploymentDialog } from '~/components/deploy/GitLabDeploymentDialog';
+import { useMakeloPublish } from '~/components/deploy/MakeloPublish.client';
 import { useNetlifyDeploy } from '~/components/deploy/NetlifyDeploy.client';
 import { useVercelDeploy } from '~/components/deploy/VercelDeploy.client';
-import { accountUrl, platformUser, publishedSites } from '~/lib/clickmyapp/platform';
+import { accountUrl, platformUser, publishedSites } from '~/lib/makelo/platform';
 import { chatId } from '~/lib/persistence/useChatHistory';
 import { isGitLabConnected } from '~/lib/stores/gitlabConnection';
 import { netlifyConnection } from '~/lib/stores/netlify';
@@ -40,11 +40,9 @@ export const DeployButton = ({
   const activePreview = previews[activePreviewIndex];
   const [isDeploying, setIsDeploying] = useState(false);
 
-  const [deployingTo, setDeployingTo] = useState<'ClickMyApp' | 'netlify' | 'vercel' | 'github' | 'gitlab' | null>(
-    null,
-  );
+  const [deployingTo, setDeployingTo] = useState<'Makelo' | 'netlify' | 'vercel' | 'github' | 'gitlab' | null>(null);
 
-  const { publish: publishToClickMyApp } = useClickMyAppPublish();
+  const { publish: publishToMakelo } = useMakeloPublish();
   const cmaUser = useStore(platformUser);
   const currentChat = useStore(chatId);
   const liveSite = useStore(publishedSites)[currentChat ?? ''];
@@ -60,12 +58,12 @@ export const DeployButton = ({
   const [githubProjectName, setGithubProjectName] = useState('');
   const [gitlabProjectName, setGitlabProjectName] = useState('');
 
-  const handleClickMyAppPublish = async () => {
+  const handleMakeloPublish = async () => {
     setIsDeploying(true);
-    setDeployingTo('ClickMyApp');
+    setDeployingTo('Makelo');
 
     try {
-      await publishToClickMyApp();
+      await publishToMakelo();
     } finally {
       setIsDeploying(false);
       setDeployingTo(null);
@@ -159,7 +157,7 @@ export const DeployButton = ({
             {isDeploying ? (
               <>
                 <span className="i-ph:spinner animate-spin" />
-                {deployingTo === 'ClickMyApp' ? 'Publishing…' : `Deploying to ${deployingTo}…`}
+                {deployingTo === 'Makelo' ? 'Publishing…' : `Deploying to ${deployingTo}…`}
               </>
             ) : (
               <>
@@ -187,15 +185,11 @@ export const DeployButton = ({
                 { 'opacity-60 cursor-not-allowed': isDeploying || !activePreview },
               )}
               disabled={isDeploying || !activePreview}
-              onClick={handleClickMyAppPublish}
+              onClick={handleMakeloPublish}
             >
-              <img className="w-5 h-5" height="24" width="24" src="/clickmyapp-mark.svg" alt="ClickMyApp" />
+              <img className="w-5 h-5" height="24" width="24" src="/makelo-mark.svg" alt="Makelo" />
               <span className="mx-auto font-semibold">
-                {cmaUser
-                  ? liveSite
-                    ? 'Update on ClickMyApp'
-                    : 'Publish to ClickMyApp (free subdomain)'
-                  : 'Log in to publish'}
+                {cmaUser ? (liveSite ? 'Update on Makelo' : 'Publish to Makelo (free subdomain)') : 'Log in to publish'}
               </span>
             </DropdownMenu.Item>
             {liveSite && (

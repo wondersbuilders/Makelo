@@ -1,7 +1,7 @@
 import { useStore } from '@nanostores/react';
 import { toast } from 'react-toastify';
 import { DeployButton } from '~/components/deploy/DeployButton';
-import { publishedSites } from '~/lib/clickmyapp/platform';
+import { publishedSites } from '~/lib/makelo/platform';
 import { chatId } from '~/lib/persistence/useChatHistory';
 import { workbenchStore } from '~/lib/stores/workbench';
 

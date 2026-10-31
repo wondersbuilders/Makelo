@@ -25,7 +25,7 @@ logs
 dist-ssr
 .DS_Store
 
-# ClickMyApp platform service has its own image
+# Makelo platform service has its own image
 platform/node_modules
 platform/data
 deploy/

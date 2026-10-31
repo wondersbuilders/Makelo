@@ -6,7 +6,7 @@ import { getThemeMode } from '~/types/theme';
 
 const credentiallessIframeAttributes = { credentialless: 'true' };
 
-const DOCUMENTATION_URL = 'https://clickmyapp.com/docs';
+const DOCUMENTATION_URL = 'https://makelo.com/docs';
 
 interface DocumentationPanelProps {
   open: boolean;
@@ -28,7 +28,7 @@ export function DocumentationPanel({ open, onClose }: DocumentationPanelProps) {
                 <div className="i-ph:book-open-text h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <Dialog.Title className="truncate text-sm font-semibold">ClickMyApp Guide</Dialog.Title>
+                <Dialog.Title className="truncate text-sm font-semibold">Makelo Guide</Dialog.Title>
                 <Dialog.Description className="truncate text-xs text-bolt-elements-textSecondary">
                   Product documentation and guides
                 </Dialog.Description>
@@ -59,7 +59,7 @@ export function DocumentationPanel({ open, onClose }: DocumentationPanelProps) {
 
           <iframe
             {...credentiallessIframeAttributes}
-            title="ClickMyApp documentation"
+            title="Makelo documentation"
             src={open ? documentationUrl : 'about:blank'}
             className="min-h-0 w-full flex-1 border-0 bg-bolt-elements-background-depth-1"
             referrerPolicy="strict-origin-when-cross-origin"

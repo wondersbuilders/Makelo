@@ -1,8 +1,8 @@
 import { atom } from 'nanostores';
 import { db, getAll, type ChatHistoryItem } from '~/lib/persistence';
 
-const COLLAPSED_KEY = 'clickmyapp-sidebar-collapsed';
-const PINNED_KEY = 'clickmyapp-pinned-projects';
+const COLLAPSED_KEY = 'makelo-sidebar-collapsed';
+const PINNED_KEY = 'makelo-pinned-projects';
 
 export const SIDEBAR_WIDTH = 248;
 export const SIDEBAR_RAIL = 60;

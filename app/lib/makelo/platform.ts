@@ -1,16 +1,16 @@
 import { atom } from 'nanostores';
 
 /**
- * Talks to the ClickMyApp platform service (accounts, publishing, domains).
+ * Talks to the Makelo platform service (accounts, publishing, domains).
  *
  * Web: the builder and platform share one origin (Caddy routes /account and /api/platform),
  *      so requests use the login cookie.
- * Desktop: set VITE_PLATFORM_URL (e.g. https://app.clickmyapp.com) at build time; requests
+ * Desktop: set VITE_PLATFORM_URL (e.g. https://app.makelo.com) at build time; requests
  *      use an access token the user creates on their dashboard.
  */
 export const PLATFORM_URL: string = (import.meta.env.VITE_PLATFORM_URL || '').replace(/\/+$/, '');
 
-const TOKEN_KEY = 'clickmyapp-access-token';
+const TOKEN_KEY = 'makelo-access-token';
 
 export interface PlatformUser {
   id: number;
@@ -91,7 +91,7 @@ export async function platformFetch<T>(path: string, init: RequestInit = {}): Pr
   }
 
   if (!res.ok) {
-    throw new PlatformError(data?.error || `ClickMyApp request failed (${res.status})`, res.status);
+    throw new PlatformError(data?.error || `Makelo request failed (${res.status})`, res.status);
   }
 
   return data as T;

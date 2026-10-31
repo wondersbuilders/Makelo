@@ -8,8 +8,8 @@ import BackgroundRays from '~/components/ui/BackgroundRays';
 
 export const meta: MetaFunction = () => {
   return [
-    { title: 'ClickMyApp' },
-    { name: 'description', content: 'Build web and mobile apps by chatting with AI — ClickMyApp' },
+    { title: 'Makelo' },
+    { name: 'description', content: 'Build web and mobile apps by chatting with AI — Makelo' },
   ];
 };
 

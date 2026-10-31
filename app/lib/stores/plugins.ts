@@ -110,7 +110,7 @@ export const usePluginStore = create<PluginStore>((set, get) => ({
       const manifest = pluginManifestSchema.parse(input.manifest);
 
       if (!isSupportedAdapter(manifest)) {
-        throw new Error('This plugin requires an adapter that is not supported by this version of ClickMyApp.');
+        throw new Error('This plugin requires an adapter that is not supported by this version of Makelo.');
       }
 
       const existing = await pluginDatabase.get(manifest.id);

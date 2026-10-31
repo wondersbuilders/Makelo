@@ -11,7 +11,7 @@ export function normalizeHostname(input) {
   return h;
 }
 
-export const VERIFY_PREFIX = '_clickmyapp-verify';
+export const VERIFY_PREFIX = '_makelo-verify';
 
 /** Country suffixes where the registrable domain has three labels (myshop.co.uk is a root domain). */
 const MULTI_PART_SUFFIXES = new Set([
@@ -54,15 +54,15 @@ export function createDomains(db, config, resolver = dns) {
       records.push({
         type: 'A',
         name: domain.hostname,
-        value: config.serverIpv4 || '<your ClickMyApp server IP>',
-        purpose: 'Points your domain at ClickMyApp',
+        value: config.serverIpv4 || '<your Makelo server IP>',
+        purpose: 'Points your domain at Makelo',
       });
     } else {
       records.push({
         type: 'CNAME',
         name: domain.hostname,
         value: config.cnameTarget || `${site.slug}.${config.sitesDomain}`,
-        purpose: 'Points your domain at ClickMyApp',
+        purpose: 'Points your domain at Makelo',
       });
     }
 
@@ -143,7 +143,7 @@ export function createDomains(db, config, resolver = dns) {
         : {
             ok: true,
             warning:
-              'Ownership confirmed. Your A/CNAME record does not point at ClickMyApp yet, so visitors will not see your app until it does.',
+              'Ownership confirmed. Your A/CNAME record does not point at Makelo yet, so visitors will not see your app until it does.',
           };
     },
 

@@ -151,7 +151,7 @@ export default function PluginTab() {
     id: 'boltdiy.text-utilities',
     name: 'Text Utilities',
     description: 'Count and transform text with deterministic tools.',
-    publisher: 'ClickMyApp',
+    publisher: 'Makelo',
     license: 'MIT',
     category: 'Productivity',
     version: '1.0.0',

@@ -7,7 +7,7 @@ import { loadConfig } from '../src/config.js';
 import { parseListeningPorts } from '../src/sandbox/rc.js';
 import { createApp } from '../src/server.js';
 
-const APP = 'app.clickmyapp.test';
+const APP = 'app.makelo.test';
 const apps = [];
 
 after(async () => {
@@ -18,7 +18,7 @@ function setup() {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cma-sbx-'));
   const config = loadConfig({
     APP_HOST: APP,
-    SITES_DOMAIN: 'clickmyapp.test',
+    SITES_DOMAIN: 'makelo.test',
     DATA_DIR: dataDir,
     SECURE_COOKIES: 'false',
     PUBLIC_SCHEME: 'http',

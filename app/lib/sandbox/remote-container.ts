@@ -1,12 +1,12 @@
 /**
  * RemoteContainer — a drop-in stand-in for StackBlitz's WebContainer that runs the
- * user's project in a ClickMyApp cloud sandbox (e2b.dev microVM) instead of the browser.
+ * user's project in a Makelo cloud sandbox (e2b.dev microVM) instead of the browser.
  *
  * It implements the part of the WebContainer API the builder uses:
  *   workdir, fs.{readFile,writeFile,readdir,mkdir,rm}, spawn(), on('port'|'server-ready'|...),
  *   internal.watchPaths(), setPreviewScript()
  */
-import { PLATFORM_URL, platformFetch } from '~/lib/clickmyapp/platform';
+import { PLATFORM_URL, platformFetch } from '~/lib/makelo/platform';
 
 type Listener = (...args: any[]) => void;
 
@@ -31,7 +31,7 @@ type SandboxEvent =
   | { t: 'fs'; events: { type: string; path: string; content?: string }[] }
   | { t: 'closed' };
 
-const TOKEN_KEY = 'clickmyapp-access-token';
+const TOKEN_KEY = 'makelo-access-token';
 
 function authHeaders(): Record<string, string> {
   try {
@@ -76,11 +76,11 @@ export function projectKeyFromLocation(): string {
   }
 
   try {
-    let tab = sessionStorage.getItem('clickmyapp-tab');
+    let tab = sessionStorage.getItem('makelo-tab');
 
     if (!tab) {
       tab = `new-${Math.random().toString(36).slice(2, 10)}`;
-      sessionStorage.setItem('clickmyapp-tab', tab);
+      sessionStorage.setItem('makelo-tab', tab);
     }
 
     return tab;

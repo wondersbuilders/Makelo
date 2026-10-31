@@ -1,6 +1,6 @@
 {
-  "name": "clickmyapp",
-  "description": "ClickMyApp — build web and mobile apps with AI",
+  "name": "makelo",
+  "description": "Makelo — build web and mobile apps with AI",
   "private": true,
   "license": "MIT",
   "sideEffects": false,

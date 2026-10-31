@@ -9,7 +9,7 @@
  * localhost are moved to 0.0.0.0 so the sandbox's public preview URL can reach them.
  */
 export function rcScript({ root, extraAllowedHosts = '' }) {
-  return `# ClickMyApp sandbox shell setup
+  return `# Makelo sandbox shell setup
 export PS1='\\[\\e[1;35m\\]~/project\\[\\e[0m\\] \\[\\e[1;36m\\]❯\\[\\e[0m\\] '
 __cma_first=1
 __cma_prompt() {
@@ -48,7 +48,7 @@ function envExports(opts) {
     .join('\n');
 }
 
-export const LISTEN_ALL = `// ClickMyApp: expose dev servers bound to localhost on all interfaces.
+export const LISTEN_ALL = `// Makelo: expose dev servers bound to localhost on all interfaces.
 const net = require('net');
 const LOOPBACK = /^(localhost|127\\.0\\.0\\.1|::1|\\[::1\\])$/i;
 const listen = net.Server.prototype.listen;

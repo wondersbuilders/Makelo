@@ -5,7 +5,7 @@ import { Header } from '~/components/header/Header';
 import BackgroundRays from '~/components/ui/BackgroundRays';
 import { LoadingOverlay } from '~/components/ui/LoadingOverlay';
 
-export const meta: MetaFunction = () => [{ title: 'Start a blank app | ClickMyApp' }];
+export const meta: MetaFunction = () => [{ title: 'Start a blank app | Makelo' }];
 
 export default function Starter() {
   return (

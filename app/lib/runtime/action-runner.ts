@@ -593,7 +593,7 @@ export class ActionRunner {
     details?: {
       url?: string;
       error?: string;
-      source?: 'netlify' | 'vercel' | 'github' | 'gitlab' | 'clickmyapp';
+      source?: 'netlify' | 'vercel' | 'github' | 'gitlab' | 'makelo';
     },
   ): void {
     if (!this.onDeployAlert) {

@@ -55,9 +55,9 @@ export const checkForUpdates = async (): Promise<UpdateCheckResult> => {
      * Get the latest version from GitHub's main branch package.json
      * Using raw.githubusercontent.com which doesn't require authentication
      */
-    // ClickMyApp: version manifest served from your own server (a package.json-style {"version": "x.y.z"}).
+    // Makelo: version manifest served from your own server (a package.json-style {"version": "x.y.z"}).
     const latestPackageResponse = await fetch(
-      import.meta.env.VITE_UPDATE_MANIFEST_URL || 'https://downloads.clickmyapp.com/latest.json',
+      import.meta.env.VITE_UPDATE_MANIFEST_URL || 'https://downloads.makelo.com/latest.json',
     );
 
     if (!latestPackageResponse.ok) {

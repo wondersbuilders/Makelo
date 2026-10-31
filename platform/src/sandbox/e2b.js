@@ -123,7 +123,7 @@ export function createE2bProvider(config) {
       const opts = {
         ...base,
         timeoutMs: idleMs,
-        metadata: { app: 'clickmyapp', userId: String(userId), project: projectKey.slice(0, 64) },
+        metadata: { app: 'makelo', userId: String(userId), project: projectKey.slice(0, 64) },
         lifecycle: { onTimeout: 'pause', autoResume: true },
       };
       const sbx = config.e2bTemplate ? await Sandbox.create(config.e2bTemplate, opts) : await Sandbox.create(opts);

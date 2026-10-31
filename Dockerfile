@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git \
 ARG VITE_PUBLIC_APP_URL
 ENV VITE_PUBLIC_APP_URL=${VITE_PUBLIC_APP_URL}
 
-# ClickMyApp: 'cloud' runs projects in e2b sandboxes via the platform (no StackBlitz licence needed)
+# Makelo: 'cloud' runs projects in e2b sandboxes via the platform (no StackBlitz licence needed)
 ARG VITE_SANDBOX_MODE=cloud
 ENV VITE_SANDBOX_MODE=${VITE_SANDBOX_MODE}
 

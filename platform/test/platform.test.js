@@ -7,13 +7,13 @@ import { loadConfig } from '../src/config.js';
 import { createApp } from '../src/server.js';
 import { safeRelPath, slugify } from '../src/sites.js';
 
-const APP = 'app.clickmyapp.test';
+const APP = 'app.makelo.test';
 
 function setup(dnsRecords = {}) {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cma-'));
   const config = loadConfig({
     APP_HOST: APP,
-    SITES_DOMAIN: 'clickmyapp.test',
+    SITES_DOMAIN: 'makelo.test',
     DATA_DIR: dataDir,
     SECURE_COOKIES: 'false',
     PUBLIC_SCHEME: 'http',
@@ -117,9 +117,9 @@ test('publish goes live on a free subdomain, with SPA fallback and binary files'
   assert.equal(res.status, 200);
   const { site } = await res.json();
   assert.match(site.slug, /^pizza-orders-[0-9a-f]{4}$/);
-  assert.equal(site.url, `http://${site.slug}.clickmyapp.test`);
+  assert.equal(site.url, `http://${site.slug}.makelo.test`);
 
-  const host = `${site.slug}.clickmyapp.test`;
+  const host = `${site.slug}.makelo.test`;
   assert.equal(await (await req('/', { host })).text(), '<h1>Pizza</h1>');
   assert.equal(await (await req('/menu/today', { host })).text(), '<h1>Pizza</h1>'); // SPA route
   assert.equal((await req('/missing.js', { host })).status, 404);
@@ -175,20 +175,20 @@ test('custom domain: add, verify via DNS, serve, and allow TLS', async () => {
   const fail = await req(`/account/domains/${domain.id}/verify`, { method: 'POST', cookie });
   assert.match(decodeURIComponent(fail.headers.get('location')), /error=TXT record not found/);
 
-  dnsRecords.txt['_clickmyapp-verify.app.myshop.com'] = domain.verify_token;
-  dnsRecords.cname['app.myshop.com'] = ['sites.clickmyapp.test.'];
+  dnsRecords.txt['_makelo-verify.app.myshop.com'] = domain.verify_token;
+  dnsRecords.cname['app.myshop.com'] = ['sites.makelo.test.'];
   const ok = await req(`/account/domains/${domain.id}/verify`, { method: 'POST', cookie });
   assert.match(decodeURIComponent(ok.headers.get('location')), /ok=app\.myshop\.com is connected/);
 
   assert.equal(await (await req('/', { host: 'app.myshop.com' })).text(), 'shop');
   assert.equal((await req('/internal/tls-ask?domain=app.myshop.com', { host: 'platform' })).status, 200);
-  assert.equal((await req(`/internal/tls-ask?domain=${site.slug}.clickmyapp.test`, { host: 'platform' })).status, 200);
+  assert.equal((await req(`/internal/tls-ask?domain=${site.slug}.makelo.test`, { host: 'platform' })).status, 200);
   assert.equal((await req('/internal/tls-ask?domain=random.example.org', { host: 'platform' })).status, 404);
-  assert.equal((await req('/internal/tls-ask?domain=nope-0000.clickmyapp.test', { host: 'platform' })).status, 404);
+  assert.equal((await req('/internal/tls-ask?domain=nope-0000.makelo.test', { host: 'platform' })).status, 404);
 
   const dupe = await req(`/account/apps/${site.id}/domains`, { method: 'POST', cookie, form: { hostname: 'app.myshop.com' } });
   assert.match(decodeURIComponent(dupe.headers.get('location')), /already connected to another app/);
-  const own = await req(`/account/apps/${site.id}/domains`, { method: 'POST', cookie, form: { hostname: 'x.clickmyapp.test' } });
+  const own = await req(`/account/apps/${site.id}/domains`, { method: 'POST', cookie, form: { hostname: 'x.makelo.test' } });
   assert.match(decodeURIComponent(own.headers.get('location')), /error=/);
 });
 
@@ -239,7 +239,7 @@ test('reserved and taken subdomains are refused', async () => {
   }
   const ok = await req(`/account/apps/${site.id}/slug`, { method: 'POST', cookie, form: { slug: 'my-pizza' } });
   assert.match(decodeURIComponent(ok.headers.get('location')), /ok=/);
-  assert.equal(await (await req('/', { host: 'my-pizza.clickmyapp.test' })).text(), '1');
+  assert.equal(await (await req('/', { host: 'my-pizza.makelo.test' })).text(), '1');
 });
 
 test('dashboard and app pages render and escape user input', async () => {
@@ -269,7 +269,7 @@ test('an unverified claim cannot block the real owner', async () => {
   assert.match(decodeURIComponent(add.headers.get('location')), /ok=Domain added/);
 
   const real = ctx.domains.forSite(s2.id)[0];
-  dnsRecords.txt['_clickmyapp-verify.realbiz.com'] = real.verify_token;
+  dnsRecords.txt['_makelo-verify.realbiz.com'] = real.verify_token;
   dnsRecords.a['realbiz.com'] = ['203.0.113.10'];
 
   // The squatter cannot verify (their token is not in DNS)

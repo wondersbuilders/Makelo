@@ -22,7 +22,7 @@ function pickProvider(config) {
   }
 
   if (config.sandboxProvider === 'local') {
-    console.warn('[clickmyapp] SANDBOX_PROVIDER=local runs user code on this machine without isolation. Development only!');
+    console.warn('[makelo] SANDBOX_PROVIDER=local runs user code on this machine without isolation. Development only!');
     return createLocalProvider(config);
   }
 
@@ -295,20 +295,20 @@ export function createApp(config, { resolver, db: givenDb, sandboxProvider } = {
     const user = currentUser(c);
 
     if (user) {
-      c.header('X-ClickMyApp-User', String(user.id));
+      c.header('X-Makelo-User', String(user.id));
       return c.text('ok');
     }
 
     const wantsHtml = (c.req.header('accept') || '').includes('text/html');
     const uri = c.req.header('x-forwarded-uri') || '/';
 
-    return wantsHtml ? c.redirect(`/account/login?next=${encodeURIComponent(safeNext(uri))}`) : c.json({ error: 'Log in to ClickMyApp first.' }, 401);
+    return wantsHtml ? c.redirect(`/account/login?next=${encodeURIComponent(safeNext(uri))}`) : c.json({ error: 'Log in to Makelo first.' }, 401);
   });
 
   app.use('/api/platform/*', async (c, next) => {
     if (c.req.path === '/api/platform/auth-check') return next();
     const user = currentUser(c);
-    if (!user) return c.json({ error: 'Log in to ClickMyApp first.' }, 401);
+    if (!user) return c.json({ error: 'Log in to Makelo first.' }, 401);
     if (c.req.method === 'POST' && !sameOrigin(c)) return c.json({ error: 'Bad origin' }, 403);
     c.set('user', user);
     await next();

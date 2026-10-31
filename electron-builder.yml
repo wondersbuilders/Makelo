@@ -1,5 +1,5 @@
-appId: com.nyagatron.clickmyapp
-productName: ClickMyApp
+appId: com.nyagatron.makelo
+productName: Makelo
 directories:
   buildResources: build
   output: dist
@@ -55,7 +55,7 @@ npmRebuild: false
 
 publish:
   provider: generic
-  url: https://downloads.clickmyapp.com/desktop
+  url: https://downloads.makelo.com/desktop
 
 electronDownload:
   mirror: https://github.com/electron/electron/releases/download/

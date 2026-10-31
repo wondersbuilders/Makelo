@@ -388,7 +388,7 @@ export const Preview = memo(({ selectedElement, setSelectedElement }: PreviewPro
       const match = activePreview.baseUrl.match(/^https?:\/\/([^.]+)\.local-credentialless\.webcontainer-api\.io/);
 
       if (!match) {
-        // ClickMyApp cloud sandbox previews have a normal public URL.
+        // Makelo cloud sandbox previews have a normal public URL.
         window.open(activePreview.baseUrl, '_blank', `width=${size.width},height=${size.height},noopener`);
         return;
       }
@@ -969,7 +969,7 @@ export const Preview = memo(({ selectedElement, setSelectedElement }: PreviewPro
                           );
 
                           if (!match) {
-                            // ClickMyApp cloud sandbox previews have a normal public URL.
+                            // Makelo cloud sandbox previews have a normal public URL.
                             window.open(activePreview.baseUrl, '_blank', 'noopener');
                             return;
                           }

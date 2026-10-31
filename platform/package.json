@@ -1,8 +1,8 @@
 {
-  "name": "clickmyapp-platform",
+  "name": "makelo-platform",
   "version": "0.1.0",
   "private": true,
-  "description": "ClickMyApp platform: accounts, publishing, subdomains, custom domains, hosting",
+  "description": "Makelo platform: accounts, publishing, subdomains, custom domains, hosting",
   "type": "module",
   "engines": {
     "node": ">=22.12.0"
