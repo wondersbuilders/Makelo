@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 import type { TabType } from '~/components/@settings/core/types';
 import { DocumentationPanel } from '~/components/ui/DocumentationPanel';
 import { ThemeSwitch } from '~/components/ui/ThemeSwitch';
-import { accountUrl, PLATFORM_URL, platformUser, publishedSites } from '~/lib/makelo/platform';
+import { accountUrl, loadPlatformUser, PLATFORM_URL, platformUser, publishedSites } from '~/lib/makelo/platform';
 import { chatId, db, deleteById, type ChatHistoryItem } from '~/lib/persistence';
 import {
   pinnedProjects,
@@ -64,10 +64,18 @@ export function AppSidebar() {
 
     // Pick up projects created or renamed elsewhere (new chats, other tabs).
     const timer = setInterval(refreshRecentProjects, 4000);
+
+    // Keep the credits balance fresh while the user builds.
+    const creditsTimer = setInterval(() => {
+      if (platformUser.get()) {
+        loadPlatformUser();
+      }
+    }, 60_000);
     window.addEventListener('focus', refreshRecentProjects);
 
     return () => {
       clearInterval(timer);
+      clearInterval(creditsTimer);
       window.removeEventListener('focus', refreshRecentProjects);
     };
   }, []);
@@ -219,6 +227,14 @@ export function AppSidebar() {
               >
                 <div className="i-ph:globe-simple text-lg text-bolt-elements-textSecondary" /> Published apps
               </a>
+              <a
+                href={accountUrl('/account/billing')}
+                target={PLATFORM_URL ? '_blank' : undefined}
+                rel="noopener noreferrer"
+                className={navItem}
+              >
+                <div className="i-ph:lightning text-lg text-bolt-elements-textSecondary" /> Billing & credits
+              </a>
               <button className={navItem} onClick={() => setSettingsTab('connectors')}>
                 <div className="i-ph:plugs-connected text-lg text-bolt-elements-textSecondary" /> Integrations
               </button>
@@ -249,6 +265,29 @@ export function AppSidebar() {
           </>
         )}
       </div>
+
+      {/* Credits */}
+      {!collapsed && user && typeof user.credits === 'number' && (
+        <a
+          href={accountUrl('/account/billing')}
+          className="mx-2 mb-2 flex items-center justify-between rounded-xl border border-bolt-elements-borderColor bg-bolt-elements-background-depth-1 px-3 py-2 hover:border-accent-500/60"
+        >
+          <span className="flex flex-col">
+            <span className="text-[12px] text-bolt-elements-textSecondary">{user.plan || 'Free'} plan</span>
+            <span
+              className={classNames(
+                'text-[14px] font-semibold',
+                user.credits > 0 ? 'text-bolt-elements-textPrimary' : 'text-red-500',
+              )}
+            >
+              {user.credits.toLocaleString('en-GB')} credits
+            </span>
+          </span>
+          <span className="text-[12px] font-semibold text-white rounded-lg px-2.5 py-1 bg-gradient-to-r from-violet-600 to-blue-600">
+            {user.credits > 0 ? 'Upgrade' : 'Top up'}
+          </span>
+        </a>
+      )}
 
       {/* Account */}
       <div

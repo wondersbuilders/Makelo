@@ -5,6 +5,7 @@ import {
   adminLoginPage,
   keysPage,
   overviewPage,
+  paymentsPage,
   planPage,
   plansPage,
   settingsPage,
@@ -13,6 +14,7 @@ import {
   usersPage,
 } from './admin-views.js';
 import { RATE_DEFAULTS } from './billing.js';
+import { money } from './admin-views.js';
 import { normalizeHostname } from './domains.js';
 import { KEY_CATALOG } from './secrets.js';
 
@@ -23,7 +25,7 @@ const DAY = 86400_000;
  * session cookie. Only users with role "admin" can sign in. People listed in ADMIN_EMAILS are
  * promoted to admin the first time they sign in here.
  */
-export function createAdminApp({ db, config, auth, sites, billing, settings, sandboxes, limitAuth }) {
+export function createAdminApp({ db, config, auth, sites, billing, settings, sandboxes, payments, limitAuth }) {
   const app = new Hono();
   const cookieName = config.secureCookies ? '__Host-mk_admin' : 'mk_admin';
   const bootstrapAdmins = new Set(
@@ -188,6 +190,9 @@ export function createAdminApp({ db, config, auth, sites, billing, settings, san
         usedSandbox30: used.sandbox || 0,
         liveSandboxes: sandboxes?.liveCount() ?? 0,
         sandboxProvider: sandboxes?.configured() ? sandboxes.providerName : null,
+        revenue30: payments.revenueSince(since30).map((r) => money(r.cents, r.currency)).join(' + ') || money(0, billing.rate('currency')),
+        payments30: payments.revenueSince(since30).reduce((a, r) => a + r.n, 0),
+        paymentsWarning: payments.configured() ? (payments.webhookConfigured() ? '' : 'Whop webhook secret is missing — payments will not be credited.') : 'Payments are off: connect Whop to sell plans and credits.',
         missingKeys: keyStatus.filter((k) => essential.includes(k.env) && k.source === 'missing').map((k) => k.label),
         daily,
         recentUsers: q.recentUsers.all(),
@@ -260,7 +265,7 @@ export function createAdminApp({ db, config, auth, sites, billing, settings, san
 
   // ---------- plans ----------
   app.get('/plans', (c) =>
-    page(c, 'Plans', plansPage({ plans: billing.plans(), defaultPlanId: billing.defaultPlan()?.id, currency: billing.rate('currency') })),
+    page(c, 'Plans', plansPage({ plans: billing.plans(), defaultPlanId: billing.defaultPlan()?.id, currency: billing.rate('currency'), packs: payments.packs() })),
   );
 
   app.post('/plans', async (c) => {
@@ -290,6 +295,39 @@ export function createAdminApp({ db, config, auth, sites, billing, settings, san
     billing.archivePlan(id, archive);
     return back(c, '/plans', 'ok', archive ? 'Plan archived.' : 'Plan restored.');
   });
+
+  // ---------- credit packs ----------
+  app.post('/packs', async (c) => {
+    const r = payments.savePack(await c.req.parseBody());
+    return back(c, '/plans', r.error ? 'error' : 'ok', r.error || `Credit pack "${r.pack.name}" created.`);
+  });
+
+  app.post('/packs/:id', async (c) => {
+    const r = payments.savePack({ ...(await c.req.parseBody()), id: Number(c.req.param('id')) });
+    return back(c, '/plans', r.error ? 'error' : 'ok', r.error || 'Credit pack saved.');
+  });
+
+  app.post('/packs/:id/archive', async (c) => {
+    const archive = (await c.req.parseBody()).archived === '1';
+    payments.archivePack(Number(c.req.param('id')), archive);
+    return back(c, '/plans', 'ok', archive ? 'Credit pack archived.' : 'Credit pack restored.');
+  });
+
+  // ---------- payments ----------
+  app.get('/payments', (c) =>
+    page(
+      c,
+      'Payments',
+      paymentsPage({
+        payments: payments.allPayments(),
+        revenue: payments.revenueSince(Date.now() - 30 * DAY),
+        configured: payments.configured(),
+        webhookConfigured: payments.webhookConfigured(),
+        webhookUrl: `${config.scheme}://${config.appHost}/webhooks/whop`,
+        sandbox: settings.get('whop_sandbox') === '1',
+      }),
+    ),
+  );
 
   // ---------- usage ----------
   app.get('/usage', (c) => {
@@ -356,6 +394,7 @@ export function createAdminApp({ db, config, auth, sites, billing, settings, san
         rates: Object.fromEntries(RATE_KEYS.map((k) => [k, billing.rate(k)])),
         plans: billing.plans(),
         defaultPlanId: billing.defaultPlan()?.id,
+        whopSandbox: settings.get('whop_sandbox') === '1',
       }),
     ),
   );
@@ -377,6 +416,10 @@ export function createAdminApp({ db, config, auth, sites, billing, settings, san
       if (Number.isFinite(v) && v >= 0) {
         settings.set(`rate:${k}`, String(v));
       }
+    }
+
+    if (form.whop_sandbox_present) {
+      settings.set('whop_sandbox', form.whop_sandbox === '1' ? '1' : '');
     }
 
     const planId = Number(form.default_plan_id);

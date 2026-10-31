@@ -13,7 +13,8 @@ import { createE2bProvider } from './sandbox/e2b.js';
 import { createLocalProvider } from './sandbox/local.js';
 import { createSandboxManager } from './sandbox/manager.js';
 import { createSites, contentType } from './sites.js';
-import { appPage, authPage, dashboardPage, placeholderPage } from './views.js';
+import { createPayments, verifyWhopSignature } from './payments.js';
+import { appPage, authPage, billingPage, dashboardPage, placeholderPage } from './views.js';
 
 const PH = (config) => `${config.scheme}://${config.appHost}/account/signup`;
 const safeNext = (n) => (typeof n === 'string' && n.startsWith('/') && !n.startsWith('//') && !n.startsWith('/\\') ? n : '/');
@@ -32,13 +33,14 @@ function pickProvider(config, settings) {
   return createE2bProvider(config, () => settings.secret('E2B_API_KEY') || config.e2bApiKey);
 }
 
-export function createApp(config, { resolver, db: givenDb, sandboxProvider } = {}) {
+export function createApp(config, { resolver, db: givenDb, sandboxProvider, fetchImpl } = {}) {
   const db = givenDb || openDb(config.dataDir);
   const auth = createAuth(db, config);
   const sites = createSites(db, config);
   const domains = createDomains(db, config, resolver);
   const settings = createSettings(db, loadMasterKey(config));
   const billing = createBilling(db, settings);
+  const payments = createPayments({ db, config, settings, billing, auth, fetchImpl });
   const provider = sandboxProvider ?? pickProvider(config, settings);
   const sandboxes = provider
     ? createSandboxManager(db, config, provider, { onUsage: (userId, seconds) => billing.chargeSandbox(userId, seconds) })
@@ -149,8 +151,40 @@ export function createApp(config, { resolver, db: givenDb, sandboxProvider } = {
     return c.json({ charged: credits, balance: billing.balance(userId) });
   });
 
+  // ---------- Whop webhook (public; authenticated by its signature) ----------
+  app.post('/webhooks/whop', async (c) => {
+    const body = await c.req.text();
+    const ok = verifyWhopSignature({
+      secret: settings.secret('WHOP_WEBHOOK_SECRET'),
+      id: c.req.header('webhook-id'),
+      timestamp: c.req.header('webhook-timestamp'),
+      signature: c.req.header('webhook-signature'),
+      body,
+    });
+
+    if (!ok) {
+      return c.json({ error: 'invalid signature' }, 401);
+    }
+
+    let event;
+
+    try {
+      event = JSON.parse(body);
+    } catch {
+      return c.json({ error: 'invalid json' }, 400);
+    }
+
+    try {
+      const result = await payments.handleEvent({ ...event, id: event.id || c.req.header('webhook-id') });
+      return c.json({ received: true, result });
+    } catch (err) {
+      console.error('[makelo] whop webhook failed', err);
+      return c.json({ error: 'processing failed' }, 500); // Whop retries
+    }
+  });
+
   // ---------- admin dashboard on its own host ----------
-  const adminApp = createAdminApp({ db, config, auth, sites, billing, settings, sandboxes, limitAuth });
+  const adminApp = createAdminApp({ db, config, auth, sites, billing, settings, sandboxes, payments, limitAuth });
 
   // Admin host → admin app; app host → builder API + accounts; anything else → published user sites.
   app.use('*', async (c, next) => {
@@ -270,6 +304,47 @@ export function createApp(config, { resolver, db: givenDb, sandboxProvider } = {
     return c.html(
       dashboardPage({ user, sites: sites.list(user.id), siteUrl: sites.siteUrl, tokens: auth.listApiTokens(user.id), flash: flashFrom(c), billing: billingSummary(user.id) }),
     );
+  });
+
+  // ---------- billing & credits ----------
+  app.get('/account/billing', (c) => {
+    const user = c.get('user');
+
+    return c.html(
+      billingPage({
+        user,
+        sub: billing.subscription(user.id),
+        balance: billing.balance(user.id),
+        used: billing.usedThisPeriod(user.id),
+        plans: billing.plans().filter((p) => p.visible && !p.archived),
+        packs: payments.packs().filter((k) => k.visible && !k.archived),
+        membership: payments.membership(user.id),
+        history: payments.history(user.id),
+        payEnabled: payments.configured(),
+        flash: flashFrom(c),
+      }),
+    );
+  });
+
+  app.post('/account/billing/checkout', async (c) => {
+    const form = await c.req.parseBody();
+
+    try {
+      const r = await payments.checkout(c.get('user'), { kind: String(form.kind), id: Number(form.id) });
+      return r.error ? back(c, '/account/billing', 'error', r.error) : c.redirect(r.url, 303);
+    } catch (err) {
+      console.error('[makelo] checkout failed', err);
+      return back(c, '/account/billing', 'error', `Could not start checkout: ${err.message}`);
+    }
+  });
+
+  app.post('/account/billing/cancel', async (c) => {
+    try {
+      const r = await payments.cancel(c.get('user').id);
+      return back(c, '/account/billing', r.error ? 'error' : 'ok', r.error || 'Subscription cancelled. You keep your plan until the end of this period.');
+    } catch (err) {
+      return back(c, '/account/billing', 'error', `Could not cancel: ${err.message}`);
+    }
   });
 
   app.post('/account/tokens', async (c) => {
@@ -591,5 +666,5 @@ export function createApp(config, { resolver, db: givenDb, sandboxProvider } = {
     });
   }
 
-  return { app, db, auth, sites, domains, sandboxes, settings, billing };
+  return { app, db, auth, sites, domains, sandboxes, settings, billing, payments };
 }

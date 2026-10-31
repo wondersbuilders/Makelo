@@ -15,6 +15,8 @@ const TOKEN_KEY = 'makelo-access-token';
 export interface PlatformUser {
   id: number;
   email: string;
+  plan?: string | null;
+  credits?: number;
 }
 
 export interface PlatformSite {

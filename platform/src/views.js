@@ -20,12 +20,13 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;p
 .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:99px}.pill.ok{background:#d1fae5;color:#065f46}.pill.wait{background:#fef3c7;color:#92400e}.pill.off{background:var(--code);color:var(--muted)}
 .apps{display:grid;gap:12px}.app{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
 form.inline{display:inline}
+.num{text-align:right;font-variant-numeric:tabular-nums}
 `;
 
 export function layout({ title, user, body, flash }) {
   const flashHtml = flash ? `<div class="flash ${esc(flash.type)}">${esc(flash.message)}</div>` : '';
   const nav = user
-    ? `<nav><a href="/">Builder</a><a href="/account">My apps</a><span class="muted">${esc(user.email)}</span>
+    ? `<nav><a href="/">Builder</a><a href="/account">My apps</a><a href="/account/billing">Billing</a><span class="muted">${esc(user.email)}</span>
        <form class="inline" method="post" action="/account/logout"><button class="secondary">Log out</button></form></nav>`
     : `<nav><a href="/account/login">Log in</a><a class="btn" href="/account/signup">Sign up free</a></nav>`;
 
@@ -75,7 +76,8 @@ function planCard(billing) {
 
   return `<div class="card"><div class="app"><div><h2 style="margin:0">${esc(plan?.name || 'Free')} plan</h2>
     <div class="muted">${Number(billing.balance).toLocaleString('en-GB')} credits left${renew ? ` · renews ${esc(renew)}` : ''}</div></div>
-    <span class="pill ${billing.balance > 0 ? 'ok' : 'wait'}">${billing.balance > 0 ? 'Active' : 'Out of credits'}</span></div>
+    <div style="display:flex;gap:8px;align-items:center"><span class="pill ${billing.balance > 0 ? 'ok' : 'wait'}">${billing.balance > 0 ? 'Active' : 'Out of credits'}</span>
+    <a class="btn" href="/account/billing">Upgrade or buy credits</a></div></div>
     ${others ? `<p class="muted" style="margin-top:14px">Other plans</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">${others}</div>` : ''}
   </div>`;
 }
@@ -165,4 +167,78 @@ export function placeholderPage({ title, message, href = 'https://makelo.com' })
 <style>${CSS} body{display:grid;place-items:center;min-height:100vh;text-align:center}</style></head>
 <body><div class="card narrow"><div style="color:var(--text)">${LOGO}</div><h1 style="margin-top:16px">${esc(title)}</h1><p class="muted">${esc(message)}</p>
 <a class="btn" href="${esc(href)}">Build your own app with Makelo</a></div></body></html>`;
+}
+
+const fmtMoney = (cents, currency) => {
+  try {
+    return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format((cents || 0) / 100);
+  } catch {
+    return `${currency} ${((cents || 0) / 100).toFixed(2)}`;
+  }
+};
+
+/** Billing & credits: current plan, upgrade options, credit top-ups, payment history. */
+export function billingPage({ user, sub, balance, used, plans, packs, membership, history, payEnabled, flash }) {
+  const current = sub?.plan;
+  const renew = sub?.period_end ? new Date(sub.period_end).toISOString().slice(0, 10) : '';
+  const buy = (kind, id, label, primary = true) =>
+    payEnabled
+      ? `<form method="post" action="/account/billing/checkout"><input type="hidden" name="kind" value="${kind}"><input type="hidden" name="id" value="${id}"><button class="${primary ? '' : 'secondary'}" style="width:100%">${esc(label)}</button></form>`
+      : `<button class="secondary" style="width:100%" disabled>Payments coming soon</button>`;
+
+  const planCards = plans
+    .map((p) => {
+      const isCurrent = current && current.id === p.id;
+      const action = isCurrent
+        ? '<button class="secondary" style="width:100%" disabled>Current plan</button>'
+        : p.price_cents > 0
+          ? buy('plan', p.id, current && current.price_cents > p.price_cents ? `Switch to ${p.name}` : `Upgrade to ${p.name}`)
+          : '';
+      return `<div class="card" style="margin:0;display:flex;flex-direction:column;gap:8px;${isCurrent ? 'border-color:var(--accent);box-shadow:0 0 0 2px rgba(124,58,237,.15)' : ''}">
+        <div><h2 style="margin:0">${esc(p.name)}</h2><div class="muted" style="font-size:13px">${esc(p.description || '')}</div></div>
+        <div style="font-size:28px;font-weight:700">${p.price_cents ? esc(fmtMoney(p.price_cents, p.currency)) : 'Free'}<span class="muted" style="font-size:14px;font-weight:400">${p.price_cents ? ' /month' : ''}</span></div>
+        <ul style="margin:0;padding-left:18px;color:var(--muted);font-size:14px">
+          <li>${Number(p.monthly_credits).toLocaleString('en-GB')} credits every month</li>
+          <li>Up to ${p.max_apps} published apps</li>
+          <li>${p.custom_domains ? 'Connect your own domains' : 'Free subdomain only'}</li>
+        </ul>
+        <div style="margin-top:auto">${action}</div></div>`;
+    })
+    .join('');
+
+  const packCards = packs
+    .map(
+      (k) => `<div class="card" style="margin:0;display:flex;flex-direction:column;gap:6px"><b>${esc(k.name)}</b>
+      <div style="font-size:22px;font-weight:700">${Number(k.credits).toLocaleString('en-GB')} <span class="muted" style="font-size:14px;font-weight:400">credits</span></div>
+      <div class="muted">${esc(fmtMoney(k.price_cents, k.currency))} · one-off · kept when your plan renews</div>${buy('credits', k.id, `Buy for ${fmtMoney(k.price_cents, k.currency)}`, false)}</div>`,
+    )
+    .join('');
+
+  const rows = history
+    .map(
+      (h) => `<tr><td>${new Date(h.created_at).toISOString().slice(0, 10)}</td><td>${esc(h.description)}</td><td class="num">${esc(fmtMoney(h.amount_cents, h.currency))}</td><td><span class="pill ok">${esc(h.status)}</span></td></tr>`,
+    )
+    .join('');
+
+  return layout({
+    title: 'Billing & credits',
+    user,
+    flash,
+    body: `<p><a href="/account">← My apps</a></p><h1>Billing & credits</h1>
+      <div class="card"><div class="app"><div><h2 style="margin:0">${esc(current?.name || 'Free')} plan</h2>
+        <div class="muted">${Number(balance).toLocaleString('en-GB')} credits left${renew ? ` · ${membership?.status === 'canceling' ? 'ends' : 'renews'} ${esc(renew)}` : ''} · used this period: ${Number((used.ai || 0) + (used.sandbox || 0)).toLocaleString('en-GB')}</div></div>
+        ${
+          membership && membership.status !== 'canceling'
+            ? `<form method="post" action="/account/billing/cancel" onsubmit="return confirm('Cancel your subscription? You keep your plan until the end of this period.')"><button class="secondary">Cancel subscription</button></form>`
+            : membership?.status === 'canceling'
+              ? '<span class="pill wait">Cancels at period end</span>'
+              : ''
+        }</div></div>
+      <h2 style="margin:22px 0 10px">Plans</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px">${planCards}</div>
+      <h2 style="margin:26px 0 10px">Top up credits</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">${packCards || '<p class="muted">No credit packs available.</p>'}</div>
+      <div class="card" style="margin-top:22px"><h2>Payment history</h2>${rows ? `<table><tr><th>Date</th><th>Item</th><th class="num">Amount</th><th>Status</th></tr>${rows}</table>` : '<p class="muted">No payments yet.</p>'}
+        <p class="muted" style="font-size:13px">Payments are processed securely by Whop.</p></div>`,
+  });
 }

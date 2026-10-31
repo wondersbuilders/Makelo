@@ -90,6 +90,45 @@ const MIGRATIONS = [
    );
    CREATE INDEX credit_ledger_user ON credit_ledger(user_id, created_at);
    CREATE INDEX credit_ledger_time ON credit_ledger(created_at);`,
+
+  // 3: payments through a gateway (Whop): credit packs, memberships, payments, webhook idempotency
+  `ALTER TABLE plans RENAME COLUMN stripe_price_id TO gateway_plan_id;
+   CREATE TABLE credit_packs (
+     id          INTEGER PRIMARY KEY,
+     name        TEXT NOT NULL,
+     credits     INTEGER NOT NULL,
+     price_cents INTEGER NOT NULL,
+     currency    TEXT NOT NULL DEFAULT 'GBP',
+     visible     INTEGER NOT NULL DEFAULT 1,
+     archived    INTEGER NOT NULL DEFAULT 0,
+     sort        INTEGER NOT NULL DEFAULT 0,
+     created_at  INTEGER NOT NULL,
+     updated_at  INTEGER NOT NULL
+   );
+   CREATE TABLE gateway_memberships (
+     user_id       INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+     membership_id TEXT NOT NULL UNIQUE,
+     plan_id       INTEGER NOT NULL REFERENCES plans(id),
+     status        TEXT NOT NULL,
+     updated_at    INTEGER NOT NULL
+   );
+   CREATE TABLE payments (
+     id           INTEGER PRIMARY KEY,
+     user_id      INTEGER REFERENCES users(id) ON DELETE SET NULL,
+     provider     TEXT NOT NULL,
+     ref          TEXT NOT NULL UNIQUE,
+     kind         TEXT NOT NULL,
+     amount_cents INTEGER NOT NULL DEFAULT 0,
+     currency     TEXT NOT NULL DEFAULT 'GBP',
+     description  TEXT NOT NULL DEFAULT '',
+     status       TEXT NOT NULL,
+     created_at   INTEGER NOT NULL
+   );
+   CREATE INDEX payments_time ON payments(created_at);
+   CREATE TABLE webhook_events (
+     id         TEXT PRIMARY KEY,
+     created_at INTEGER NOT NULL
+   );`,
 ];
 
 export function openDb(dataDir) {

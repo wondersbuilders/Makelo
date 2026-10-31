@@ -22,12 +22,12 @@ export function createBilling(db, settings) {
   const q = {
     countPlans: db.prepare('SELECT COUNT(*) AS n FROM plans'),
     insertPlan: db.prepare(
-      `INSERT INTO plans (slug, name, description, price_cents, currency, monthly_credits, max_apps, custom_domains, stripe_price_id, visible, sort, created_at, updated_at)
-       VALUES (@slug, @name, @description, @price_cents, @currency, @monthly_credits, @max_apps, @custom_domains, @stripe_price_id, @visible, @sort, @t, @t)`,
+      `INSERT INTO plans (slug, name, description, price_cents, currency, monthly_credits, max_apps, custom_domains, gateway_plan_id, visible, sort, created_at, updated_at)
+       VALUES (@slug, @name, @description, @price_cents, @currency, @monthly_credits, @max_apps, @custom_domains, @gateway_plan_id, @visible, @sort, @t, @t)`,
     ),
     updatePlan: db.prepare(
       `UPDATE plans SET name=@name, description=@description, price_cents=@price_cents, currency=@currency, monthly_credits=@monthly_credits,
-       max_apps=@max_apps, custom_domains=@custom_domains, stripe_price_id=@stripe_price_id, visible=@visible, sort=@sort, updated_at=@t WHERE id=@id`,
+       max_apps=@max_apps, custom_domains=@custom_domains, gateway_plan_id=@gateway_plan_id, visible=@visible, sort=@sort, updated_at=@t WHERE id=@id`,
     ),
     archivePlan: db.prepare('UPDATE plans SET archived = ?, updated_at = ? WHERE id = ?'),
     plan: db.prepare('SELECT * FROM plans WHERE id = ?'),
@@ -43,6 +43,10 @@ export function createBilling(db, settings) {
        period_end = excluded.period_end, updated_at = excluded.updated_at`,
     ),
     balance: db.prepare('SELECT COALESCE(SUM(delta), 0) AS b FROM credit_ledger WHERE user_id = ?'),
+    lastGrant: db.prepare("SELECT id, meta FROM credit_ledger WHERE user_id = ? AND kind = 'grant' ORDER BY id DESC LIMIT 1"),
+    purchasedSince: db.prepare(
+      "SELECT COALESCE(SUM(delta), 0) AS n FROM credit_ledger WHERE user_id = ? AND kind = 'purchase' AND delta > 0 AND id > ?",
+    ),
     addLedger: db.prepare('INSERT INTO credit_ledger (user_id, delta, kind, note, meta, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
     usedSince: db.prepare(
       "SELECT kind, COALESCE(-SUM(delta), 0) AS used FROM credit_ledger WHERE user_id = ? AND delta < 0 AND created_at >= ? GROUP BY kind",
@@ -53,7 +57,7 @@ export function createBilling(db, settings) {
     const t = now();
 
     for (const p of DEFAULT_PLANS) {
-      q.insertPlan.run({ currency: 'GBP', stripe_price_id: null, visible: 1, ...p, t });
+      q.insertPlan.run({ currency: 'GBP', gateway_plan_id: null, visible: 1, ...p, t });
     }
   }
 
@@ -68,17 +72,23 @@ export function createBilling(db, settings) {
   }
 
   /** Start a fresh billing period and reset credits to the plan's monthly allowance. */
+  /**
+   * Start a fresh billing period: plan credits reset to the allowance, purchased credits carry over.
+   * Plan credits are spent first, so the unspent purchased amount is min(balance, purchased so far).
+   */
   function startPeriod(userId, plan, note) {
     const t = now();
-    const balance = q.balance.get(userId).b;
 
     db.transaction(() => {
-      q.upsertSub.run(userId, plan.id, t, t + MONTH, t);
-      const delta = plan.monthly_credits - Math.max(0, balance);
+      const balance = Math.max(0, q.balance.get(userId).b);
+      const lastGrant = q.lastGrant.get(userId);
+      const previousCarry = lastGrant?.meta ? Number(JSON.parse(lastGrant.meta).carry) || 0 : 0;
+      const purchased = q.purchasedSince.get(userId, lastGrant ? lastGrant.id : 0).n;
+      const carry = Math.min(balance, previousCarry + purchased);
+      const delta = plan.monthly_credits + carry - balance;
 
-      if (delta !== 0) {
-        q.addLedger.run(userId, delta, 'grant', note || `${plan.name} monthly credits`, null, t);
-      }
+      q.upsertSub.run(userId, plan.id, t, t + MONTH, t);
+      q.addLedger.run(userId, delta, 'grant', note || `${plan.name} monthly credits`, JSON.stringify({ carry, plan: plan.slug }), t);
     })();
   }
 
@@ -97,7 +107,7 @@ export function createBilling(db, settings) {
         monthly_credits: Math.max(0, Math.round(Number(input.monthly_credits || 0))),
         max_apps: Math.max(0, Math.round(Number(input.max_apps || 0))),
         custom_domains: input.custom_domains ? 1 : 0,
-        stripe_price_id: String(input.stripe_price_id || '').trim() || null,
+        gateway_plan_id: String(input.gateway_plan_id || '').trim() || null,
         visible: input.visible ? 1 : 0,
         sort: Math.round(Number(input.sort || 0)),
         t: now(),

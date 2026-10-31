@@ -28,6 +28,7 @@ const NAV = [
   ['/users', 'Users', '👤'],
   ['/plans', 'Plans', '◆'],
   ['/usage', 'Credits & usage', '⚡'],
+  ['/payments', 'Payments', '£'],
   ['/keys', 'API keys', '🔑'],
   ['/settings', 'Settings', '⚙'],
 ];
@@ -87,11 +88,12 @@ export function overviewPage(d) {
   <div class="stats">
     <div class="stat"><div class="k">Users</div><div class="v">${n(d.users)}</div><div class="s">+${n(d.newUsers7d)} in 7 days</div></div>
     <div class="stat"><div class="k">Paying users</div><div class="v">${n(d.paying)}</div><div class="s">on paid plans</div></div>
-    <div class="stat"><div class="k">Monthly revenue (est.)</div><div class="v">${esc(money(d.mrrCents, d.currency))}</div><div class="s">from active plans</div></div>
+    <div class="stat"><div class="k">Revenue (30 days)</div><div class="v">${esc(d.revenue30)}</div><div class="s">${n(d.payments30)} payments · est. MRR ${esc(money(d.mrrCents, d.currency))}</div></div>
     <div class="stat"><div class="k">Published apps</div><div class="v">${n(d.publishedApps)}</div><div class="s">${n(d.domains)} custom domains</div></div>
     <div class="stat"><div class="k">Credits used (30 days)</div><div class="v">${n(d.used30)}</div><div class="s">AI ${n(d.usedAi30)} · Sandbox ${n(d.usedSandbox30)}</div></div>
     <div class="stat"><div class="k">Live sandboxes</div><div class="v">${n(d.liveSandboxes)}</div><div class="s">${esc(d.sandboxProvider || 'not configured')}</div></div>
   </div>
+  ${d.paymentsWarning ? `<div class="flash warn">${esc(d.paymentsWarning)} <a href="/keys">API keys</a></div>` : ''}
   ${d.missingKeys.length ? `<div class="flash warn">Missing keys: ${esc(d.missingKeys.join(', '))} — add them under <a href="/keys">API keys</a>.</div>` : ''}
   <div class="card"><h2>Credits used per day (last 30 days)</h2><div class="bars">${bars}</div></div>
   <div class="grid2">
@@ -167,14 +169,14 @@ function planForm(p = {}, currency = 'GBP') {
     <div class="row"><div><label>Monthly credits</label><input name="monthly_credits" type="number" min="0" value="${v('monthly_credits', 1000)}"></div>
       <div><label>Max apps</label><input name="max_apps" type="number" min="0" value="${v('max_apps', 10)}"></div>
       <div><label>Sort order</label><input name="sort" type="number" value="${v('sort', 0)}"></div></div>
-    <label>Stripe price ID <span class="muted" style="font-weight:400">(optional, for checkout)</span></label><input name="stripe_price_id" value="${v('stripe_price_id')}" placeholder="price_…">
+    <label>Whop plan ID <span class="muted" style="font-weight:400">(optional — leave empty and Makelo creates the Whop plan for you)</span></label><input name="gateway_plan_id" value="${v('gateway_plan_id')}" placeholder="plan_…">
     <label class="check"><input type="checkbox" name="custom_domains" value="1" ${p.custom_domains ? 'checked' : ''}> Allow custom domains</label>
     <label class="check"><input type="checkbox" name="visible" value="1" ${p.id === undefined || p.visible ? 'checked' : ''}> Show on pricing page</label>
     <p></p><button>${p.id ? 'Save plan' : 'Create plan'}</button>
   </form>`;
 }
 
-export function plansPage({ plans, defaultPlanId, currency }) {
+export function plansPage({ plans, defaultPlanId, currency, packs }) {
   return `<h1>Plans</h1>
   <div class="card" style="padding:8px 14px"><table>
     <tr><th>Plan</th><th class="num">Price</th><th class="num">Credits / mo</th><th class="num">Max apps</th><th>Domains</th><th class="num">Subscribers</th><th></th></tr>
@@ -187,7 +189,48 @@ export function plansPage({ plans, defaultPlanId, currency }) {
       )
       .join('')}
   </table></div>
-  <div class="card"><h2>New plan</h2>${planForm({}, currency)}</div>`;
+  <div class="card"><h2>New plan</h2>${planForm({}, currency)}</div>
+  ${packsSection(packs, currency)}`;
+}
+
+function packsSection(packs = [], currency = 'GBP') {
+  const rows = packs
+    .map(
+      (k) => `<tr style="${k.archived ? 'opacity:.5' : ''}"><td colspan="6"><form method="post" action="/packs/${k.id}" class="row" style="align-items:end">
+        <div><label>Name</label><input name="name" value="${esc(k.name)}"></div>
+        <div style="flex:0 0 120px"><label>Credits</label><input name="credits" type="number" min="1" value="${k.credits}"></div>
+        <div style="flex:0 0 110px"><label>Price</label><input name="price" type="number" step="0.01" min="0" value="${(k.price_cents / 100).toFixed(2)}"></div>
+        <div style="flex:0 0 80px"><label>Currency</label><input name="currency" maxlength="3" value="${esc(k.currency)}"></div>
+        <div style="flex:0 0 70px"><label>Order</label><input name="sort" type="number" value="${k.sort}"></div>
+        <label class="check" style="flex:0 0 auto;margin-bottom:10px"><input type="checkbox" name="visible" value="1" ${k.visible ? 'checked' : ''}> Visible</label>
+        <button class="secondary">Save</button></form>
+        <form method="post" action="/packs/${k.id}/archive" style="margin-top:6px"><input type="hidden" name="archived" value="${k.archived ? '0' : '1'}"><button class="secondary" style="font-size:12px;padding:5px 10px">${k.archived ? 'Restore' : 'Archive'}</button></form></td></tr>`,
+    )
+    .join('');
+
+  return `<div class="card"><h2>Credit top-up packs</h2><p class="muted">One-off purchases. Credits are added on top of the plan allowance.</p>
+    <table>${rows}</table>
+    <h2 style="margin-top:18px">New credit pack</h2>
+    <form method="post" action="/packs" class="row" style="align-items:end">
+      <div><label>Name</label><input name="name" required placeholder="Mega top-up"></div>
+      <div style="flex:0 0 120px"><label>Credits</label><input name="credits" type="number" min="1" required placeholder="5000"></div>
+      <div style="flex:0 0 110px"><label>Price</label><input name="price" type="number" step="0.01" min="0" required placeholder="35.00"></div>
+      <div style="flex:0 0 80px"><label>Currency</label><input name="currency" maxlength="3" value="${esc(currency)}"></div>
+      <input type="hidden" name="visible" value="1"><button>Create pack</button></form></div>`;
+}
+
+export function paymentsPage({ payments, revenue, configured, webhookConfigured, webhookUrl, sandbox }) {
+  return `<h1>Payments</h1>
+  ${!configured ? '<div class="flash warn">Whop is not connected. Add the Whop API key and company ID under <a href="/keys">API keys</a>.</div>' : ''}
+  <div class="stats">
+    ${revenue.map((r) => `<div class="stat"><div class="k">Revenue 30 days (${esc(r.currency)})</div><div class="v">${esc(money(r.cents, r.currency))}</div><div class="s">${n(r.n)} payments</div></div>`).join('') || '<div class="stat"><div class="k">Revenue 30 days</div><div class="v">£0.00</div></div>'}
+    <div class="stat"><div class="k">Gateway</div><div class="v" style="font-size:20px">Whop ${sandbox ? '<span class="pill wait">Sandbox</span>' : ''}</div><div class="s">${configured ? 'Connected' : 'Not connected'} · webhook ${webhookConfigured ? 'secret set' : 'secret missing'}</div></div>
+  </div>
+  <div class="card"><h2>Webhook</h2><p class="muted">In the Whop dashboard, create a webhook pointing to this URL with the events <code>payment.succeeded</code>, <code>membership.updated</code> and <code>membership.deactivated</code>, then paste its secret under API keys.</p>
+    <code>${esc(webhookUrl)}</code></div>
+  <div class="card" style="padding:8px 14px"><table><tr><th>When</th><th>User</th><th>Type</th><th>Item</th><th class="num">Amount</th><th>Reference</th></tr>
+    ${payments.map((p) => `<tr><td>${dateTime(p.created_at)}</td><td>${p.user_id ? `<a href="/users/${p.user_id}">${esc(p.email || p.user_id)}</a>` : '—'}</td><td>${esc(p.kind)}</td><td>${esc(p.description)}</td><td class="num">${esc(money(p.amount_cents, p.currency))}</td><td><code style="font-size:11px">${esc(p.ref)}</code></td></tr>`).join('') || '<tr><td colspan=6 class="muted">No payments yet</td></tr>'}
+  </table></div>`;
 }
 
 export function planPage({ plan, currency }) {
@@ -242,7 +285,7 @@ export function keysPage({ keys }) {
     .join('')}`;
 }
 
-export function settingsPage({ rates, plans, defaultPlanId }) {
+export function settingsPage({ rates, plans, defaultPlanId, whopSandbox }) {
   return `<h1>Settings</h1>
   <form method="post" action="/settings">
   <div class="card"><h2>Credit pricing</h2><p class="muted">How many credits each activity costs. Changes apply immediately.</p>
@@ -256,5 +299,8 @@ export function settingsPage({ rates, plans, defaultPlanId }) {
       .join('')}</select></div>
       <div><label>Extra sign-up bonus credits</label><input name="signup_bonus_credits" type="number" min="0" value="${esc(rates.signup_bonus_credits)}"></div>
       <div style="flex:0 0 120px"><label>Currency</label><input name="currency" maxlength="3" value="${esc(rates.currency)}"></div></div></div>
+  <div class="card"><h2>Payments</h2>
+    <input type="hidden" name="whop_sandbox_present" value="1">
+    <label class="check"><input type="checkbox" name="whop_sandbox" value="1" ${whopSandbox ? 'checked' : ''}> Whop sandbox mode (test payments with test cards — turn off to take real money)</label></div>
   <button>Save settings</button></form>`;
 }

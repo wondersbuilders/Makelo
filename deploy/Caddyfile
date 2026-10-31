@@ -30,6 +30,10 @@
 		handle /api/platform/* {
 			import platform
 		}
+		# Payment gateway webhooks (Whop) — authenticated by signature, not login
+		handle /webhooks/* {
+			import platform
+		}
 
 		# Logo files the login page needs before anyone is logged in
 		@public path /favicon.svg /favicon.ico /makelo-*.svg /apple-touch-icon*.png
