@@ -13,7 +13,7 @@ import { REQUEST_LIMITS, asProviderInfo, llmCallRequestSchema, parseBody } from 
 import { MAX_TOKENS, PROVIDER_COMPLETION_LIMITS, isReasoningModel } from '~/lib/.server/llm/constants';
 import { toLlmCallResponse } from '~/lib/.server/llm/llmcall-response';
 import { streamText } from '~/lib/.server/llm/stream-text';
-import { getApiKeysFromCookie, getProviderSettingsFromCookie } from '~/lib/api/cookies';
+import { getRequestCredentials } from '~/lib/api/cookies';
 import { LLMManager } from '~/lib/modules/llm/manager';
 import type { ModelInfo } from '~/lib/modules/llm/types';
 import { createMessage } from '~/lib/persistence/messageMigration';
@@ -100,8 +100,8 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
   const { name: providerName } = provider;
 
   const cookieHeader = request.headers.get('Cookie');
-  const apiKeys = getApiKeysFromCookie(cookieHeader);
-  const providerSettings = getProviderSettingsFromCookie(cookieHeader);
+  const { apiKeys, providerSettings: requestProviderSettings } = getRequestCredentials(cookieHeader);
+  const providerSettings = requestProviderSettings;
 
   if (streamOutput) {
     try {

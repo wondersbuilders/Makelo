@@ -1,3 +1,5 @@
+import { MANAGED_KEYS } from '~/lib/makelo/managed';
+
 export function safeJsonParse<T>(value: string | null | undefined, fallback: T): T {
   if (!value) {
     return fallback;
@@ -41,6 +43,32 @@ export function parseCookies(cookieHeader: string | null) {
 export function getApiKeysFromCookie(cookieHeader: string | null): Record<string, string> {
   const cookies = parseCookies(cookieHeader);
   return safeJsonParse<Record<string, string>>(cookies.apiKeys, {});
+}
+
+/**
+ * Keys and provider settings to use for this request. In managed mode the user's own keys are
+ * ignored and base URL overrides are dropped, so the admin's keys are used and never redirected.
+ */
+export function getRequestCredentials(cookieHeader: string | null): {
+  apiKeys: Record<string, string>;
+  providerSettings: Record<string, any>;
+} {
+  const providerSettings = getProviderSettingsFromCookie(cookieHeader);
+
+  if (!MANAGED_KEYS) {
+    return { apiKeys: getApiKeysFromCookie(cookieHeader), providerSettings };
+  }
+
+  const safe: Record<string, any> = {};
+
+  for (const [name, setting] of Object.entries(providerSettings)) {
+    if (setting && typeof setting === 'object') {
+      const { baseUrl: _ignored, ...rest } = setting as Record<string, any>;
+      safe[name] = rest;
+    }
+  }
+
+  return { apiKeys: {}, providerSettings: safe };
 }
 
 export function getProviderSettingsFromCookie(cookieHeader: string | null): Record<string, any> {

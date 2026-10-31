@@ -19,6 +19,9 @@ ENV VITE_PUBLIC_APP_URL=${VITE_PUBLIC_APP_URL}
 
 # Makelo: 'cloud' runs projects in e2b sandboxes via the platform (no StackBlitz licence needed)
 ARG VITE_SANDBOX_MODE=cloud
+# Hosted SaaS: AI requests use the admin's provider keys (Admin → API keys)
+ARG VITE_MANAGED_KEYS=true
+ENV VITE_MANAGED_KEYS=${VITE_MANAGED_KEYS}
 ENV VITE_SANDBOX_MODE=${VITE_SANDBOX_MODE}
 
 # Install deps efficiently

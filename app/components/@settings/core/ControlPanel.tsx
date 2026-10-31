@@ -28,6 +28,7 @@ import { DocumentationPanel } from '~/components/ui/DocumentationPanel';
 import { useConnectionStatus } from '~/lib/hooks/useConnectionStatus';
 import { useFeatures } from '~/lib/hooks/useFeatures';
 import { useNotifications } from '~/lib/hooks/useNotifications';
+import { MANAGED_KEYS } from '~/lib/makelo/managed';
 import { profileStore } from '~/lib/stores/profile';
 import { tabConfigurationStore, resetTabConfiguration } from '~/lib/stores/settings';
 import { classNames } from '~/utils/classNames';
@@ -92,6 +93,11 @@ export const ControlPanel = ({ open, onClose, initialTab }: ControlPanelProps) =
     return tabConfiguration.userTabs
       .filter((tab) => {
         if (!tab?.id) {
+          return false;
+        }
+
+        // Makelo: AI keys are managed by the admin, so users don't configure providers.
+        if (MANAGED_KEYS && (tab.id === 'cloud-providers' || tab.id === 'local-providers')) {
           return false;
         }
 

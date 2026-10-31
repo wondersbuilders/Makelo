@@ -9,6 +9,7 @@ services:
         VITE_LOG_LEVEL: info
         # cloud = e2b.dev sandboxes (needs E2B_API_KEY); webcontainer = StackBlitz in-browser (needs their licence)
         VITE_SANDBOX_MODE: ${SANDBOX_MODE:-cloud}
+        VITE_MANAGED_KEYS: ${MANAGED_KEYS:-true}
     env_file: .env
     environment:
       NODE_ENV: production

@@ -26,6 +26,7 @@ const LazyWorkbench = lazy(() =>
   import('~/components/workbench/Workbench.client').then((m) => ({ default: m.Workbench })),
 );
 import { StickToBottom, useStickToBottomContext } from '~/lib/hooks';
+import { MANAGED_KEYS } from '~/lib/makelo/managed';
 import type { ModelInfo } from '~/lib/modules/llm/types';
 import { expoUrlAtom } from '~/lib/stores/qrCodeStore';
 import { workbenchStore } from '~/lib/stores/workbench';
@@ -194,6 +195,8 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       }
     }, []);
 
+    const [managedProviders, setManagedProviders] = useState<ProviderInfo[]>([]);
+
     useEffect(() => {
       if (typeof window !== 'undefined') {
         let parsedApiKeys: Record<string, string> | undefined = {};
@@ -207,6 +210,33 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         }
 
         setIsModelLoading('all');
+
+        if (MANAGED_KEYS) {
+          // Makelo: the server decides which providers (and admin keys) are available.
+          fetch('/api/models')
+            .then((response) => response.json())
+            .then((data) => {
+              const typed = data as { modelList: ModelInfo[]; providers: ProviderInfo[] };
+              setModelList(typed.modelList);
+              setManagedProviders(typed.providers);
+
+              const current = typed.providers.find((p) => p.name === provider?.name) || typed.providers[0];
+
+              if (current && current.name !== provider?.name) {
+                setProvider?.(current);
+              }
+
+              const models = typed.modelList.filter((m) => m.provider === current?.name);
+
+              if (current && models.length && !models.some((m) => m.name === model)) {
+                setModel?.(models[0].name);
+              }
+            })
+            .catch((error) => console.error('Error fetching model list:', error))
+            .finally(() => setIsModelLoading(undefined));
+
+          return;
+        }
 
         if (!providerList?.length) {
           setModelList([]);
@@ -466,7 +496,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                   setIsModelSettingsCollapsed={setIsModelSettingsCollapsed}
                   provider={provider}
                   setProvider={setProvider}
-                  providerList={providerList || (PROVIDER_LIST as ProviderInfo[])}
+                  providerList={MANAGED_KEYS ? managedProviders : providerList || (PROVIDER_LIST as ProviderInfo[])}
                   model={model}
                   setModel={setModel}
                   modelList={modelList}

@@ -17,6 +17,7 @@ import { ColorSchemeDialog } from '~/components/ui/ColorSchemeDialog';
 import { IconButton } from '~/components/ui/IconButton';
 import { ExpoQrModal } from '~/components/workbench/ExpoQrModal';
 import type { ElementInfo } from '~/components/workbench/Inspector';
+import { MANAGED_KEYS } from '~/lib/makelo/managed';
 import { isGitHubConnected } from '~/lib/stores/githubConnection';
 import { isGitLabConnected } from '~/lib/stores/gitlabConnection';
 import { useMCPStore, type ConnectorId } from '~/lib/stores/mcp';
@@ -211,7 +212,8 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
                 apiKeys={props.apiKeys}
                 modelLoading={props.isModelLoading}
               />
-              {(props.providerList || []).length > 0 &&
+              {!MANAGED_KEYS &&
+                (props.providerList || []).length > 0 &&
                 props.provider &&
                 !LOCAL_PROVIDERS.includes(props.provider.name) && (
                   <APIKeyManager

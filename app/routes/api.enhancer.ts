@@ -4,7 +4,7 @@ import { toApiErrorResponse, toMissingCredentialError } from '~/lib/.server/api/
 import { readJsonBody } from '~/lib/.server/api/read-body';
 import { REQUEST_LIMITS, enhancerRequestSchema, parseBody } from '~/lib/.server/api/schemas';
 import { streamText } from '~/lib/.server/llm/stream-text';
-import { getApiKeysFromCookie, getProviderSettingsFromCookie } from '~/lib/api/cookies';
+import { getRequestCredentials } from '~/lib/api/cookies';
 import { createMessage } from '~/lib/persistence/messageMigration';
 import { stripIndents } from '~/utils/stripIndent';
 
@@ -31,8 +31,8 @@ async function enhancerAction({ context, request }: ActionFunctionArgs) {
   const providerName = body.provider.name;
 
   const cookieHeader = request.headers.get('Cookie');
-  const apiKeys = getApiKeysFromCookie(cookieHeader);
-  const providerSettings = getProviderSettingsFromCookie(cookieHeader);
+  const { apiKeys, providerSettings: requestProviderSettings } = getRequestCredentials(cookieHeader);
+  const providerSettings = requestProviderSettings;
 
   try {
     const result = await streamText({

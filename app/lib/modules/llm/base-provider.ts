@@ -2,6 +2,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import type { LanguageModel } from 'ai';
 import { getEnv } from './env';
 import type { ProviderInfo, ProviderConfig, ModelInfo } from './types';
+import { MANAGED_KEYS } from '~/lib/makelo/managed';
 import type { IProviderSetting } from '~/types/model';
 
 /** Default timeout for model listing API calls (5 seconds) */
@@ -71,7 +72,7 @@ export abstract class BaseProvider implements ProviderInfo {
   }) {
     const { apiKeys, providerSettings, serverEnv, defaultBaseUrlKey, defaultApiTokenKey } = options;
 
-    let settingsBaseUrl = providerSettings?.baseUrl;
+    let settingsBaseUrl = MANAGED_KEYS ? undefined : providerSettings?.baseUrl;
 
     const managerEnv = getEnv();
 
@@ -95,7 +96,10 @@ export abstract class BaseProvider implements ProviderInfo {
     const apiTokenKey = this.config.apiTokenKey || defaultApiTokenKey;
 
     const apiKey =
-      apiKeys?.[this.name] || serverEnv?.[apiTokenKey] || process?.env?.[apiTokenKey] || managerEnv?.[apiTokenKey];
+      (MANAGED_KEYS ? undefined : apiKeys?.[this.name]) ||
+      serverEnv?.[apiTokenKey] ||
+      process?.env?.[apiTokenKey] ||
+      managerEnv?.[apiTokenKey];
 
     return {
       baseUrl,
