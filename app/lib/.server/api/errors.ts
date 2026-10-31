@@ -1,4 +1,5 @@
 import { InvalidToolInputError, NoSuchToolError, ToolChoiceViolationError } from 'ai';
+import { MANAGED_KEYS } from '~/lib/makelo/managed';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('api.errors');
@@ -120,7 +121,12 @@ export function toMissingCredentialError(provider: string, providerMessage?: str
     logger.warn('Provider credential error');
   }
 
-  return new ApiError('Invalid or missing API key', {
+  // Makelo: users never manage keys, so don't ask them to fix one (the admin sees the server log).
+  const message = MANAGED_KEYS
+    ? 'This AI model is not available right now. Please pick another model or try again shortly.'
+    : 'Invalid or missing API key';
+
+  return new ApiError(message, {
     status: 401,
     code: 'missing_api_key',
     isRetryable: false,

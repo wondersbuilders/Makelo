@@ -6,6 +6,7 @@ import { Button } from '~/components/ui/Button';
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '~/components/ui/Card';
 import { ConfirmationDialog, SelectionDialog } from '~/components/ui/Dialog';
 import { useDataOperations } from '~/lib/hooks/useDataOperations';
+import { MANAGED_KEYS } from '~/lib/makelo/managed';
 import { getAllChats, type Chat } from '~/lib/persistence/chats';
 import { openDatabase } from '~/lib/persistence/db';
 import { classNames } from '~/utils/classNames';
@@ -564,85 +565,87 @@ export function DataTab() {
         </div>
       </div>
 
-      {/* API Keys Section */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4 text-bolt-elements-textPrimary">API Keys</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Card className="bg-bolt-elements-background-depth-2 transition-colors hover:bg-bolt-elements-background-depth-3">
-            <CardHeader>
-              <div className="flex items-center mb-2">
-                <motion.div className="text-accent-500 mr-2" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                  <div className="i-ph-file-text-duotone w-5 h-5" />
+      {/* API Keys Section (hidden when the admin manages AI keys) */}
+      {!MANAGED_KEYS && (
+        <div>
+          <h2 className="text-xl font-semibold mb-4 text-bolt-elements-textPrimary">API Keys</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Card className="bg-bolt-elements-background-depth-2 transition-colors hover:bg-bolt-elements-background-depth-3">
+              <CardHeader>
+                <div className="flex items-center mb-2">
+                  <motion.div className="text-accent-500 mr-2" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                    <div className="i-ph-file-text-duotone w-5 h-5" />
+                  </motion.div>
+                  <CardTitle className="text-lg group-hover:text-bolt-elements-item-contentAccent transition-colors">
+                    Download Template
+                  </CardTitle>
+                </div>
+                <CardDescription>Download a template file for your API keys.</CardDescription>
+              </CardHeader>
+              <CardFooter>
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="w-full">
+                  <Button
+                    onClick={handleDownloadTemplate}
+                    disabled={isDownloadingTemplate}
+                    variant="outline"
+                    size="sm"
+                    className={classNames(
+                      'hover:text-bolt-elements-item-contentAccent hover:border-bolt-elements-item-backgroundAccent hover:bg-bolt-elements-item-backgroundAccent transition-colors w-full justify-center',
+                      isDownloadingTemplate ? 'cursor-not-allowed' : '',
+                    )}
+                  >
+                    {isDownloadingTemplate ? (
+                      <>
+                        <div className="i-ph-spinner-gap-bold animate-spin w-4 h-4 mr-2" />
+                        Downloading...
+                      </>
+                    ) : (
+                      'Download'
+                    )}
+                  </Button>
                 </motion.div>
-                <CardTitle className="text-lg group-hover:text-bolt-elements-item-contentAccent transition-colors">
-                  Download Template
-                </CardTitle>
-              </div>
-              <CardDescription>Download a template file for your API keys.</CardDescription>
-            </CardHeader>
-            <CardFooter>
-              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="w-full">
-                <Button
-                  onClick={handleDownloadTemplate}
-                  disabled={isDownloadingTemplate}
-                  variant="outline"
-                  size="sm"
-                  className={classNames(
-                    'hover:text-bolt-elements-item-contentAccent hover:border-bolt-elements-item-backgroundAccent hover:bg-bolt-elements-item-backgroundAccent transition-colors w-full justify-center',
-                    isDownloadingTemplate ? 'cursor-not-allowed' : '',
-                  )}
-                >
-                  {isDownloadingTemplate ? (
-                    <>
-                      <div className="i-ph-spinner-gap-bold animate-spin w-4 h-4 mr-2" />
-                      Downloading...
-                    </>
-                  ) : (
-                    'Download'
-                  )}
-                </Button>
-              </motion.div>
-            </CardFooter>
-          </Card>
+              </CardFooter>
+            </Card>
 
-          <Card className="bg-bolt-elements-background-depth-2 transition-colors hover:bg-bolt-elements-background-depth-3">
-            <CardHeader>
-              <div className="flex items-center mb-2">
-                <motion.div className="text-accent-500 mr-2" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                  <div className="i-ph-upload-duotone w-5 h-5" />
+            <Card className="bg-bolt-elements-background-depth-2 transition-colors hover:bg-bolt-elements-background-depth-3">
+              <CardHeader>
+                <div className="flex items-center mb-2">
+                  <motion.div className="text-accent-500 mr-2" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                    <div className="i-ph-upload-duotone w-5 h-5" />
+                  </motion.div>
+                  <CardTitle className="text-lg group-hover:text-bolt-elements-item-contentAccent transition-colors">
+                    Import API Keys
+                  </CardTitle>
+                </div>
+                <CardDescription>Import API keys from a JSON file.</CardDescription>
+              </CardHeader>
+              <CardFooter>
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="w-full">
+                  <Button
+                    onClick={() => apiKeyFileInputRef.current?.click()}
+                    disabled={isImportingKeys}
+                    variant="outline"
+                    size="sm"
+                    className={classNames(
+                      'hover:text-bolt-elements-item-contentAccent hover:border-bolt-elements-item-backgroundAccent hover:bg-bolt-elements-item-backgroundAccent transition-colors w-full justify-center',
+                      isImportingKeys ? 'cursor-not-allowed' : '',
+                    )}
+                  >
+                    {isImportingKeys ? (
+                      <>
+                        <div className="i-ph-spinner-gap-bold animate-spin w-4 h-4 mr-2" />
+                        Importing...
+                      </>
+                    ) : (
+                      'Import Keys'
+                    )}
+                  </Button>
                 </motion.div>
-                <CardTitle className="text-lg group-hover:text-bolt-elements-item-contentAccent transition-colors">
-                  Import API Keys
-                </CardTitle>
-              </div>
-              <CardDescription>Import API keys from a JSON file.</CardDescription>
-            </CardHeader>
-            <CardFooter>
-              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="w-full">
-                <Button
-                  onClick={() => apiKeyFileInputRef.current?.click()}
-                  disabled={isImportingKeys}
-                  variant="outline"
-                  size="sm"
-                  className={classNames(
-                    'hover:text-bolt-elements-item-contentAccent hover:border-bolt-elements-item-backgroundAccent hover:bg-bolt-elements-item-backgroundAccent transition-colors w-full justify-center',
-                    isImportingKeys ? 'cursor-not-allowed' : '',
-                  )}
-                >
-                  {isImportingKeys ? (
-                    <>
-                      <div className="i-ph-spinner-gap-bold animate-spin w-4 h-4 mr-2" />
-                      Importing...
-                    </>
-                  ) : (
-                    'Import Keys'
-                  )}
-                </Button>
-              </motion.div>
-            </CardFooter>
-          </Card>
+              </CardFooter>
+            </Card>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Danger Section */}
       <div>
@@ -690,27 +693,29 @@ export function DataTab() {
             </CardFooter>
           </Card>
 
-          <Card className="border-red-500/30 bg-bolt-elements-background-depth-2">
-            <CardHeader>
-              <div className="flex items-center mb-2">
-                <div className="i-ph-key-duotone w-5 h-5 text-red-500 dark:text-red-400 mr-2" />
-                <CardTitle className="text-lg">Delete All API Keys</CardTitle>
-              </div>
-              <CardDescription>
-                Remove API keys saved in this browser. Environment keys are not affected.
-              </CardDescription>
-            </CardHeader>
-            <CardFooter>
-              <Button
-                onClick={() => setShowDeleteAPIKeysConfirm(true)}
-                variant="destructive"
-                size="sm"
-                className="w-full justify-center"
-              >
-                Delete All API Keys
-              </Button>
-            </CardFooter>
-          </Card>
+          {!MANAGED_KEYS && (
+            <Card className="border-red-500/30 bg-bolt-elements-background-depth-2">
+              <CardHeader>
+                <div className="flex items-center mb-2">
+                  <div className="i-ph-key-duotone w-5 h-5 text-red-500 dark:text-red-400 mr-2" />
+                  <CardTitle className="text-lg">Delete All API Keys</CardTitle>
+                </div>
+                <CardDescription>
+                  Remove API keys saved in this browser. Environment keys are not affected.
+                </CardDescription>
+              </CardHeader>
+              <CardFooter>
+                <Button
+                  onClick={() => setShowDeleteAPIKeysConfirm(true)}
+                  variant="destructive"
+                  size="sm"
+                  className="w-full justify-center"
+                >
+                  Delete All API Keys
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
         </div>
       </div>
     </div>

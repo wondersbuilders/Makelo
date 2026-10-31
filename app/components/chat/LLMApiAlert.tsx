@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
+import { MANAGED_KEYS } from '~/lib/makelo/managed';
 import type { LlmErrorAlertType } from '~/types/actions';
 import { classNames } from '~/utils/classNames';
 
@@ -26,11 +27,15 @@ export default function LlmErrorAlert({ alert, clearAlert }: Props) {
   const getErrorMessage = () => {
     switch (errorType) {
       case 'authentication':
-        return `Authentication failed with ${provider}. Please check your API key.`;
+        return MANAGED_KEYS
+          ? `${provider} isn't available right now. Please try again shortly or pick another model.`
+          : `Authentication failed with ${provider}. Please check your API key.`;
       case 'rate_limit':
         return `Rate limit exceeded for ${provider}. Please wait before retrying.`;
       case 'quota':
-        return `Quota exceeded for ${provider}. Please check your account limits.`;
+        return MANAGED_KEYS
+          ? `${provider} is busy right now. Please try again shortly or pick another model.`
+          : `Quota exceeded for ${provider}. Please check your account limits.`;
       default:
         return 'An error occurred while processing your request.';
     }

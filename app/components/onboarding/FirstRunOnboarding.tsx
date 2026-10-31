@@ -2,6 +2,7 @@ import Cookies from 'js-cookie';
 import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogDescription, DialogRoot, DialogTitle } from '~/components/ui/Dialog';
 import { API_KEYS_UPDATED_EVENT, type ApiKeysUpdatedDetail } from '~/lib/api/apiKeys';
+import { MANAGED_KEYS } from '~/lib/makelo/managed';
 import { getAll, openDatabase } from '~/lib/persistence/db';
 import type { MCPConfig } from '~/lib/services/mcpService';
 import { useMCPStore } from '~/lib/stores/mcp';
@@ -49,7 +50,8 @@ export function FirstRunOnboarding() {
     let active = true;
 
     const checkFirstRun = async () => {
-      if (localStorage.getItem(COMPLETED_KEY)) {
+      // Makelo: AI keys are provided by the admin, so there is nothing for users to set up.
+      if (MANAGED_KEYS || localStorage.getItem(COMPLETED_KEY)) {
         return;
       }
 
