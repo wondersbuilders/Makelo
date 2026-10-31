@@ -1,0 +1,37 @@
+name: Deploy to server
+
+# Every push to main updates the live server: pull the code, rebuild, restart.
+# Needs repository secrets: DEPLOY_HOST (server IP), DEPLOY_USER (e.g. root), DEPLOY_SSH_KEY (private key).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ vars.DEPLOY_ENABLED == 'true' }}
+    timeout-minutes: 30
+    steps:
+      - name: Pull, rebuild and restart
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          command_timeout: 25m
+          script: |
+            set -e
+            cd /opt/makelo
+            git fetch --quiet origin main
+            git reset --hard origin/main
+            cd deploy
+            docker compose up -d --build --remove-orphans
+            docker image prune -f
+            sleep 10
+            docker compose ps
+            curl -fsS -o /dev/null -w "platform health: %{http_code}\n" -H "Host: $(grep ^APP_HOST= .env | cut -d= -f2)" http://localhost/api/platform/me || true
