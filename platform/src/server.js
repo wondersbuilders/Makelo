@@ -2,20 +2,40 @@ import fs from 'node:fs';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
+import { streamSSE } from 'hono/streaming';
 import { createAuth, createRateLimiter, SESSION_COOKIE } from './auth.js';
 import { openDb } from './db.js';
 import { createDomains, normalizeHostname } from './domains.js';
+import { createE2bProvider } from './sandbox/e2b.js';
+import { createLocalProvider } from './sandbox/local.js';
+import { createSandboxManager } from './sandbox/manager.js';
 import { createSites, contentType } from './sites.js';
 import { appPage, authPage, dashboardPage, placeholderPage } from './views.js';
 
 const PH = (config) => `${config.scheme}://${config.appHost}/account/signup`;
 const safeNext = (n) => (typeof n === 'string' && n.startsWith('/') && !n.startsWith('//') && !n.startsWith('/\\') ? n : '/');
 
-export function createApp(config, { resolver, db: givenDb } = {}) {
+function pickProvider(config) {
+  if (config.sandboxProvider === 'e2b') {
+    if (!config.e2bApiKey) throw new Error('SANDBOX_PROVIDER=e2b needs E2B_API_KEY');
+    return createE2bProvider(config);
+  }
+
+  if (config.sandboxProvider === 'local') {
+    console.warn('[clickmyapp] SANDBOX_PROVIDER=local runs user code on this machine without isolation. Development only!');
+    return createLocalProvider(config);
+  }
+
+  return null;
+}
+
+export function createApp(config, { resolver, db: givenDb, sandboxProvider } = {}) {
   const db = givenDb || openDb(config.dataDir);
   const auth = createAuth(db, config);
   const sites = createSites(db, config);
   const domains = createDomains(db, config, resolver);
+  const provider = sandboxProvider ?? pickProvider(config);
+  const sandboxes = provider ? createSandboxManager(db, config, provider) : null;
   const limitAuth = createRateLimiter({ max: 10, windowMs: 10 * 60_000 });
   const cookieName = config.secureCookies ? `__Host-${SESSION_COOKIE}` : SESSION_COOKIE;
 
@@ -336,6 +356,112 @@ export function createApp(config, { resolver, db: givenDb } = {}) {
     },
   );
 
+  // ---------- cloud sandboxes (replace in-browser WebContainers) ----------
+  const sbxError = (c, err) => {
+    const status = err.status || (err.code === 'ENOENT' || err.name === 'NotFoundError' || err.name === 'FileNotFoundError' ? 404 : 500);
+    return c.json({ error: status === 404 && !err.status ? 'ENOENT: no such file or directory' : err.message || 'Sandbox error', code: status === 404 ? 'ENOENT' : undefined }, status);
+  };
+
+  app.get('/api/platform/sandbox/config', (c) =>
+    c.json({ enabled: Boolean(sandboxes), provider: sandboxes?.providerName || null, usedSecondsThisMonth: sandboxes ? sandboxes.usageThisMonth(c.get('user').id) : 0, monthlyLimitSeconds: config.sandboxMonthlySeconds }),
+  );
+
+  app.post('/api/platform/sandbox', async (c) => {
+    if (!sandboxes) return c.json({ error: 'Cloud sandboxes are not enabled on this server.' }, 503);
+
+    try {
+      const { project } = await c.req.json();
+      return c.json(await sandboxes.open(c.get('user').id, project));
+    } catch (err) {
+      return sbxError(c, err);
+    }
+  });
+
+  app.use('/api/platform/sandbox/:token/*', async (c, next) => {
+    const session = sandboxes?.get(c.req.param('token'), c.get('user').id);
+    if (!session) return c.json({ error: 'Sandbox session expired — reload the page.' }, 410);
+    c.set('sbx', session);
+    await next();
+  });
+
+  app.get('/api/platform/sandbox/:token/events', (c) => {
+    const session = c.get('sbx');
+
+    return streamSSE(c, async (stream) => {
+      let open = true;
+      const queue = [];
+      let wake = null;
+      const detach = sandboxes.attach(session, (ev) => {
+        queue.push(ev);
+        wake?.();
+      });
+
+      stream.onAbort(() => {
+        open = false;
+        wake?.();
+      });
+
+      await stream.writeSSE({ event: 'ready', data: '{}' });
+
+      while (open && !session.closed) {
+        if (!queue.length) {
+          await Promise.race([new Promise((r) => (wake = r)), stream.sleep(15_000)]);
+          wake = null;
+
+          if (!queue.length) {
+            await stream.writeSSE({ event: 'ping', data: '{}' });
+            continue;
+          }
+        }
+
+        const batch = queue.splice(0, 200);
+        await stream.writeSSE({ event: 'batch', data: JSON.stringify(batch) });
+      }
+
+      detach();
+    });
+  });
+
+  const sbxBody = bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => c.json({ error: 'File too large' }, 413) });
+
+  app.post('/api/platform/sandbox/:token/fs', sbxBody, async (c) => {
+    try {
+      return c.json(await sandboxes.fs(c.get('sbx'), await c.req.json()));
+    } catch (err) {
+      return sbxError(c, err);
+    }
+  });
+
+  app.post('/api/platform/sandbox/:token/spawn', async (c) => {
+    try {
+      return c.json(await sandboxes.spawn(c.get('sbx'), await c.req.json()));
+    } catch (err) {
+      return sbxError(c, err);
+    }
+  });
+
+  app.post('/api/platform/sandbox/:token/input', async (c) => {
+    try {
+      const { pid, data } = await c.req.json();
+      await sandboxes.input(c.get('sbx'), Number(pid), data);
+      return c.json({ ok: true });
+    } catch (err) {
+      return sbxError(c, err);
+    }
+  });
+
+  app.post('/api/platform/sandbox/:token/resize', async (c) => {
+    const { pid, cols, rows } = await c.req.json();
+    await sandboxes.resize(c.get('sbx'), Number(pid), cols, rows).catch(() => {});
+    return c.json({ ok: true });
+  });
+
+  app.post('/api/platform/sandbox/:token/kill', async (c) => {
+    const { pid } = await c.req.json();
+    await sandboxes.kill(c.get('sbx'), Number(pid)).catch(() => {});
+    return c.json({ ok: true });
+  });
+
   app.notFound((c) => c.json({ error: 'Not found' }, 404));
 
   // ---------- serving published apps ----------
@@ -380,5 +506,5 @@ export function createApp(config, { resolver, db: givenDb } = {}) {
     });
   }
 
-  return { app, db, auth, sites, domains };
+  return { app, db, auth, sites, domains, sandboxes };
 }

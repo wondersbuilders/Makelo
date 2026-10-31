@@ -35,6 +35,18 @@ export function loadConfig(env = process.env) {
     maxDeployFiles: Number(env.MAX_DEPLOY_FILES || 3000),
     maxSitesPerUser: Number(env.MAX_SITES_PER_USER || 20),
     keepDeploys: Number(env.KEEP_DEPLOYS || 5),
+
+    // Cloud sandboxes (where users' apps run while they build)
+    //   SANDBOX_PROVIDER = e2b   -> e2b.dev microVMs (production)
+    //                      local -> folders on this machine, NO isolation (dev/tests only)
+    //                      ''    -> off (builder keeps using in-browser WebContainers)
+    sandboxProvider: env.SANDBOX_PROVIDER || (env.E2B_API_KEY ? 'e2b' : ''),
+    e2bApiKey: env.E2B_API_KEY || '',
+    e2bTemplate: env.E2B_TEMPLATE || '',
+    sandboxIdleMs: Number(env.SANDBOX_IDLE_MINUTES || 10) * 60_000,
+    sandboxPortPollMs: Number(env.SANDBOX_PORT_POLL_MS || 2000),
+    // 0 = unlimited. e.g. 36000 = 10 hours of sandbox time per user per month.
+    sandboxMonthlySeconds: Number(env.SANDBOX_MONTHLY_SECONDS || 0),
   };
 }
 

@@ -28,8 +28,11 @@ export default async function handleRequest(
    * `credentialless` is used because the preview iframe and the
    * COEP header would otherwise block every third-party subresource.
    */
-  responseHeaders.set('Cross-Origin-Embedder-Policy', 'credentialless');
-  responseHeaders.set('Cross-Origin-Opener-Policy', 'same-origin');
+  // ClickMyApp cloud sandboxes don't need cross-origin isolation, and it would block their preview iframes.
+  if (import.meta.env.VITE_SANDBOX_MODE !== 'cloud') {
+    responseHeaders.set('Cross-Origin-Embedder-Policy', 'credentialless');
+    responseHeaders.set('Cross-Origin-Opener-Policy', 'same-origin');
+  }
 
   return new Response(body, {
     headers: responseHeaders,

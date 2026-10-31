@@ -2,6 +2,9 @@ import { WebContainer } from '@webcontainer/api';
 import { WORK_DIR_NAME } from '~/utils/constants';
 import { cleanStackTrace } from '~/utils/stacktrace';
 
+/** 'cloud' = e2b sandboxes via the ClickMyApp platform; anything else = in-browser WebContainers. */
+export const SANDBOX_MODE: string = import.meta.env.VITE_SANDBOX_MODE || 'webcontainer';
+
 interface WebContainerContext {
   loaded: boolean;
 }
@@ -22,7 +25,16 @@ if (!import.meta.env.SSR) {
   webcontainer =
     import.meta.hot?.data.webcontainer ??
     Promise.resolve()
-      .then(() => {
+      .then(async () => {
+        /*
+         * ClickMyApp: with VITE_SANDBOX_MODE=cloud, projects run in a cloud sandbox (e2b.dev)
+         * through the platform service instead of StackBlitz WebContainers in the browser.
+         */
+        if (SANDBOX_MODE === 'cloud') {
+          const remote = await import('~/lib/sandbox/remote-container');
+          return (await remote.RemoteContainer.boot(remote.projectKeyFromLocation())) as unknown as WebContainer;
+        }
+
         return WebContainer.boot({
           coep: 'credentialless',
           workdirName: WORK_DIR_NAME,

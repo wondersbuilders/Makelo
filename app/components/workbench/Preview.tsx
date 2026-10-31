@@ -387,6 +387,12 @@ export const Preview = memo(({ selectedElement, setSelectedElement }: PreviewPro
     if (activePreview?.baseUrl) {
       const match = activePreview.baseUrl.match(/^https?:\/\/([^.]+)\.local-credentialless\.webcontainer-api\.io/);
 
+      if (!match) {
+        // ClickMyApp cloud sandbox previews have a normal public URL.
+        window.open(activePreview.baseUrl, '_blank', `width=${size.width},height=${size.height},noopener`);
+        return;
+      }
+
       if (match) {
         const previewId = match[1];
         const previewUrl = `/webcontainer/preview/${previewId}`;
@@ -963,7 +969,8 @@ export const Preview = memo(({ selectedElement, setSelectedElement }: PreviewPro
                           );
 
                           if (!match) {
-                            console.warn('[Preview] Invalid WebContainer URL:', activePreview.baseUrl);
+                            // ClickMyApp cloud sandbox previews have a normal public URL.
+                            window.open(activePreview.baseUrl, '_blank', 'noopener');
                             return;
                           }
 

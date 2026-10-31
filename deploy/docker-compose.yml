@@ -7,6 +7,8 @@ services:
       target: bolt-ai-production
       args:
         VITE_LOG_LEVEL: info
+        # cloud = e2b.dev sandboxes (needs E2B_API_KEY); webcontainer = StackBlitz in-browser (needs their licence)
+        VITE_SANDBOX_MODE: ${SANDBOX_MODE:-cloud}
     env_file: .env
     environment:
       NODE_ENV: production
